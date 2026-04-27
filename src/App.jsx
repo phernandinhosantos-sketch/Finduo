@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+// - SUPABASE -
 const SUPABASE_URL = "https://winfxmdkqjpwpgthuhgt.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nOFyGui_zLkBI7bm3SI8Gg_gwiazc50";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+// - CONSTANTS -
 const CATEGORIES = [
   { id: "food",      name: "Alimentação", emoji: "🍔", color: "#ff9f43", type: "both" },
   { id: "home",      name: "Casa",        emoji: "🏠", color: "#54a0ff", type: "expense" },
@@ -31,14 +31,14 @@ const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out"
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const USER_COLORS = ["#00e5a0","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// - HELPERS -
 const fmt = n => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n||0);
 const fmtDate = iso => { const d=new Date(iso); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`; };
 const getCat  = id => CATEGORIES.find(c=>c.id===id) || CATEGORIES[CATEGORIES.length-1];
 const getCard = id => CREDIT_CARDS_DEFAULT.find(c=>c.id===id);
 const genId   = () => Math.random().toString(36).slice(2,10);
 
-// ─── CSS ──────────────────────────────────────────────────────────────────────
+// - CSS -
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -224,7 +224,7 @@ const css = `
   }
 `;
 
-// ─── TOAST ────────────────────────────────────────────────────────────────────
+// - TOAST -
 function Toast({ toasts }) {
   return (
     <div className="toast-wrap">
@@ -237,7 +237,7 @@ function Toast({ toasts }) {
   );
 }
 
-// ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
+// - AUTH SCREEN -
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -313,7 +313,7 @@ function AuthScreen({ onAuth }) {
   );
 }
 
-// ─── ONBOARDING ───────────────────────────────────────────────────────────────
+// - ONBOARDING -
 function Onboarding({ user, onDone }) {
   const [step, setStep] = useState(1); // 1=create or join, 2=create, 3=join, 4=done
   const [wsName, setWsName] = useState("");
@@ -439,7 +439,7 @@ function Onboarding({ user, onDone }) {
   );
 }
 
-// ─── TX ITEM ──────────────────────────────────────────────────────────────────
+// - TX ITEM -
 function TxItem({ tx, members, onClick }) {
   const cat  = getCat(tx.category_id);
   const card = tx.credit_card_id ? getCard(tx.credit_card_id) : null;
@@ -466,7 +466,7 @@ function TxItem({ tx, members, onClick }) {
   );
 }
 
-// ─── NEW TX MODAL ─────────────────────────────────────────────────────────────
+// - NEW TX MODAL -
 function NewTxModal({ onClose, onSave }) {
   const [type, setType]   = useState("expense");
   const [amount, setAmount] = useState("");
@@ -557,7 +557,7 @@ function NewTxModal({ onClose, onSave }) {
   );
 }
 
-// ─── STAT CARD ────────────────────────────────────────────────────────────────
+// - STAT CARD -
 function SC({ label, value, color, icon, sub }) {
   return (
     <div className={`stat-card ${color}`}>
@@ -569,7 +569,7 @@ function SC({ label, value, color, icon, sub }) {
   );
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+// - DASHBOARD -
 function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
   const [y, m] = currentMonth;
   const mTxs = txs.filter(t => { const d=new Date(t.date+"T12:00"); return d.getFullYear()===y && d.getMonth()===m; });
@@ -714,7 +714,7 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
   );
 }
 
-// ─── TRANSACTIONS ─────────────────────────────────────────────────────────────
+// - TRANSACTIONS -
 function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -816,7 +816,7 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
   );
 }
 
-// ─── CARTÕES ──────────────────────────────────────────────────────────────────
+// - CARTÕES -
 function Cards({ txs, members, currentMonth }) {
   const [y, m] = currentMonth;
   const mTxs = txs.filter(t=>{ const d=new Date(t.date+"T12:00"); return d.getFullYear()===y&&d.getMonth()===m; });
@@ -863,7 +863,7 @@ function Cards({ txs, members, currentMonth }) {
   );
 }
 
-// ─── METAS ────────────────────────────────────────────────────────────────────
+// - METAS -
 function Goals({ goals, workspaceId, onRefresh }) {
   const [showNew, setShowNew] = useState(false);
   const [aportGoal, setAportGoal] = useState(null);
@@ -973,7 +973,7 @@ function Goals({ goals, workspaceId, onRefresh }) {
   );
 }
 
-// ─── RELATÓRIOS ───────────────────────────────────────────────────────────────
+// - RELATÓRIOS -
 function Reports({ txs, members }) {
   const now = new Date();
   const months = Array.from({length:6},(_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-i,1); return {y:d.getFullYear(),m:d.getMonth()}; }).reverse();
@@ -1102,7 +1102,7 @@ function Reports({ txs, members }) {
   );
 }
 
-// ─── INVESTIMENTOS ────────────────────────────────────────────────────────────
+// - INVESTIMENTOS -
 const SELIC = 14.75;
 const CDI_RATE = 14.65;
 const IPCA_RATE = 5.30;
@@ -1379,7 +1379,7 @@ function Investimentos() {
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// - MAIN APP -
 export default function App() {
   const [session, setSession]     = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -1496,7 +1496,7 @@ export default function App() {
     return CREDIT_CARDS_DEFAULT.filter(c=>{ const u=mTxs.filter(t=>t.credit_card_id===c.id).reduce((s,t)=>s+Number(t.amount),0); return u/c.limit>0.8; }).length;
   })();
 
-  // ── render ──
+  // - render -
   if (loading) return (
     <>
       <style>{css}</style>
@@ -1598,3 +1598,4 @@ export default function App() {
     </>
   );
 }
+
