@@ -1101,7 +1101,6 @@ function Reports({ txs, members }) {
     </div>
   );
 }
-
 // - INVESTIMENTOS -
 const SELIC = 14.75;
 const CDI_RATE = 14.65;
