@@ -1068,6 +1068,16 @@ function Reports({ txs, members }) {
   );
 }
 
+function Settings({ workspace, members, currentMember, onSignOut }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(workspace.invite_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
     <div className="page">
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:24 }}>Configurações</h1>
 
@@ -1101,6 +1111,7 @@ function Reports({ txs, members }) {
     </div>
   );
 }
+
 // - INVESTIMENTOS -
 const SELIC = 14.75;
 const CDI_RATE = 14.65;
