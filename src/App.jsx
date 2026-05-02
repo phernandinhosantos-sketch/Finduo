@@ -8,18 +8,18 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // - CONSTANTS -
 const CATEGORIES = [
-  { id: "food",      name: "Alimentação", emoji: "", color: "#ff9f43", type: "both" },
-  { id: "home",      name: "Casa",        emoji: "", color: "#54a0ff", type: "expense" },
-  { id: "transport", name: "Transporte",  emoji: "", color: "#a29bfe", type: "expense" },
-  { id: "health",    name: "Saúde",       emoji: "", color: "#00d2d3", type: "expense" },
-  { id: "leisure",   name: "Lazer",       emoji: "", color: "#ff6b9d", type: "expense" },
-  { id: "clothes",   name: "Roupas",      emoji: "", color: "#fd79a8", type: "expense" },
-  { id: "market",    name: "Mercado",     emoji: "", color: "#55efc4", type: "expense" },
-  { id: "edu",       name: "Educação",    emoji: "", color: "#fdcb6e", type: "expense" },
-  { id: "pet",       name: "Pet",         emoji: "", color: "#e17055", type: "expense" },
-  { id: "salary",    name: "Salário",     emoji: "", color: "#00e5a0", type: "income" },
-  { id: "freelance", name: "Freelance",   emoji: "", color: "#74b9ff", type: "income" },
-  { id: "other",     name: "Outros",      emoji: "", color: "#636e72", type: "both" },
+  { id: "food",      name: "Alimentação", emoji: "🍔", color: "#ff9f43", type: "both" },
+  { id: "home",      name: "Casa",        emoji: "🏠", color: "#54a0ff", type: "expense" },
+  { id: "transport", name: "Transporte",  emoji: "🚗", color: "#a29bfe", type: "expense" },
+  { id: "health",    name: "Saúde",       emoji: "💊", color: "#00d2d3", type: "expense" },
+  { id: "leisure",   name: "Lazer",       emoji: "🎮", color: "#ff6b9d", type: "expense" },
+  { id: "clothes",   name: "Roupas",      emoji: "👕", color: "#fd79a8", type: "expense" },
+  { id: "market",    name: "Mercado",     emoji: "🛒", color: "#55efc4", type: "expense" },
+  { id: "edu",       name: "Educação",    emoji: "📚", color: "#fdcb6e", type: "expense" },
+  { id: "pet",       name: "Pet",         emoji: "🐾", color: "#e17055", type: "expense" },
+  { id: "salary",    name: "Salário",     emoji: "💰", color: "#00e5a0", type: "income" },
+  { id: "freelance", name: "Freelance",   emoji: "💻", color: "#74b9ff", type: "income" },
+  { id: "other",     name: "Outros",      emoji: "📦", color: "#636e72", type: "both" },
 ];
 
 const CREDIT_CARDS_DEFAULT = [
@@ -231,7 +231,7 @@ function Toast({ toasts }) {
     <div className="toast-wrap">
       {toasts.map(t => (
         <div key={t.id} className="toast">
-          <span>{t.type==="success"?"":""}</span>{t.msg}
+          <span>{t.type==="success"?"✅":"❌"}</span>{t.msg}
         </div>
       ))}
     </div>
@@ -269,10 +269,10 @@ function AuthScreen({ onAuth }) {
   if (done) return (
     <div className="auth-wrap">
       <div className="auth-box" style={{ textAlign:"center" }}>
-        <div style={{ fontSize:48, marginBottom:16 }}></div>
+        <div style={{ fontSize:48, marginBottom:16 }}>📧</div>
         <h2 style={{ fontFamily:"var(--font-d)", fontSize:22, fontWeight:800, marginBottom:8 }}>Confirme seu e-mail</h2>
         <p style={{ color:"var(--text2)", fontSize:14 }}>Enviamos um link de confirmação para <strong style={{ color:"var(--text)" }}>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta.</p>
-        <button className="btn btn-g" style={{ marginTop:20 }} onClick={() => { setDone(false); setMode("login"); }}><- Voltar ao login</button>
+        <button className="btn btn-g" style={{ marginTop:20 }} onClick={() => { setDone(false); setMode("login"); }}>← Voltar ao login</button>
       </div>
     </div>
   );
@@ -293,7 +293,7 @@ function AuthScreen({ onAuth }) {
           <div className={`tab ${mode==="signup"?"active":""}`} onClick={() => { setMode("signup"); setError(""); }}>Criar conta</div>
         </div>
 
-        {error && <div className="alert danger" style={{ marginBottom:16 }}> {error}</div>}
+        {error && <div className="alert danger" style={{ marginBottom:16 }}>⚠️ {error}</div>}
 
         <div className="fg">
           <label className="fl">E-mail</label>
@@ -302,12 +302,12 @@ function AuthScreen({ onAuth }) {
         </div>
         <div className="fg">
           <label className="fl">Senha</label>
-          <input className="fi" type="password" placeholder="********" value={password} onChange={e => setPassword(e.target.value)}
+          <input className="fi" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key==="Enter" && handle()} />
         </div>
 
         <button className="btn btn-p btn-lg" style={{ width:"100%", marginTop:8 }} onClick={handle} disabled={loading||!email||!password}>
-          {loading ? <div className="spinner" /> : mode==="login" ? "Entrar ->" : "Criar conta ->"}
+          {loading ? <div className="spinner" /> : mode==="login" ? "Entrar →" : "Criar conta →"}
         </button>
       </div>
     </div>
@@ -366,15 +366,15 @@ function Onboarding({ user, onDone }) {
 
         {step === 1 && (
           <div className="fade-up">
-            <h2 style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800, marginBottom:8 }}>Bem-vindo ao FinDuo </h2>
+            <h2 style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800, marginBottom:8 }}>Bem-vindo ao FinDuo 👋</h2>
             <p style={{ color:"var(--text2)", fontSize:14, marginBottom:28 }}>Você quer criar um novo espaço compartilhado ou entrar no espaço do seu parceiro?</p>
             <div className="g2" style={{ gap:12 }}>
               <button className="btn btn-p" style={{ padding:"20px 12px", flexDirection:"column", gap:8, height:"auto" }} onClick={() => setStep(2)}>
-                <span style={{ fontSize:28 }}></span>
+                <span style={{ fontSize:28 }}>✨</span>
                 <div><div style={{ fontWeight:700 }}>Criar espaço</div><div style={{ fontSize:11, opacity:.7, fontWeight:400 }}>Novo casal</div></div>
               </button>
               <button className="btn btn-g" style={{ padding:"20px 12px", flexDirection:"column", gap:8, height:"auto" }} onClick={() => setStep(3)}>
-                <span style={{ fontSize:28 }}></span>
+                <span style={{ fontSize:28 }}>🔗</span>
                 <div><div style={{ fontWeight:700 }}>Entrar</div><div style={{ fontSize:11, opacity:.7, fontWeight:400 }}>Tenho um código</div></div>
               </button>
             </div>
@@ -385,7 +385,7 @@ function Onboarding({ user, onDone }) {
           <div className="fade-up">
             <h2 style={{ fontFamily:"var(--font-d)", fontSize:22, fontWeight:800, marginBottom:8 }}>Criar espaço do casal</h2>
             <p style={{ color:"var(--text2)", fontSize:14, marginBottom:24 }}>Configure seu espaço compartilhado.</p>
-            {error && <div className="alert danger" style={{ marginBottom:16 }}> {error}</div>}
+            {error && <div className="alert danger" style={{ marginBottom:16 }}>⚠️ {error}</div>}
             <div className="fg">
               <label className="fl">Seu nome</label>
               <input className="fi" placeholder="Ex: Ana" value={displayName} onChange={e => setDisplayName(e.target.value)} />
@@ -395,9 +395,9 @@ function Onboarding({ user, onDone }) {
               <input className="fi" placeholder="Ex: Casal Silva" value={wsName} onChange={e => setWsName(e.target.value)} />
             </div>
             <div style={{ display:"flex", gap:8, marginTop:8 }}>
-              <button className="btn btn-g" onClick={() => setStep(1)}><- Voltar</button>
+              <button className="btn btn-g" onClick={() => setStep(1)}>← Voltar</button>
               <button className="btn btn-p" style={{ flex:1 }} onClick={createWorkspace} disabled={loading||!wsName||!displayName}>
-                {loading ? <div className="spinner" /> : "Criar espaço ->"}
+                {loading ? <div className="spinner" /> : "Criar espaço →"}
               </button>
             </div>
           </div>
@@ -407,7 +407,7 @@ function Onboarding({ user, onDone }) {
           <div className="fade-up">
             <h2 style={{ fontFamily:"var(--font-d)", fontSize:22, fontWeight:800, marginBottom:8 }}>Entrar no espaço</h2>
             <p style={{ color:"var(--text2)", fontSize:14, marginBottom:24 }}>Peça o código de convite para seu parceiro.</p>
-            {error && <div className="alert danger" style={{ marginBottom:16 }}> {error}</div>}
+            {error && <div className="alert danger" style={{ marginBottom:16 }}>⚠️ {error}</div>}
             <div className="fg">
               <label className="fl">Seu nome</label>
               <input className="fi" placeholder="Ex: João" value={displayName} onChange={e => setDisplayName(e.target.value)} />
@@ -417,9 +417,9 @@ function Onboarding({ user, onDone }) {
               <input className="fi" placeholder="ex: a1b2c3d4" value={joinCode} onChange={e => setJoinCode(e.target.value)} style={{ letterSpacing:3, fontSize:16 }} />
             </div>
             <div style={{ display:"flex", gap:8, marginTop:8 }}>
-              <button className="btn btn-g" onClick={() => setStep(1)}><- Voltar</button>
+              <button className="btn btn-g" onClick={() => setStep(1)}>← Voltar</button>
               <button className="btn btn-p" style={{ flex:1 }} onClick={joinWorkspace} disabled={loading||!joinCode||!displayName}>
-                {loading ? <div className="spinner" /> : "Entrar ->"}
+                {loading ? <div className="spinner" /> : "Entrar →"}
               </button>
             </div>
           </div>
@@ -427,12 +427,12 @@ function Onboarding({ user, onDone }) {
 
         {step === 4 && (
           <div className="fade-up" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:12 }}></div>
+            <div style={{ fontSize:48, marginBottom:12 }}>🎉</div>
             <h2 style={{ fontFamily:"var(--font-d)", fontSize:22, fontWeight:800, marginBottom:8 }}>Espaço criado!</h2>
             <p style={{ color:"var(--text2)", fontSize:14, marginBottom:4 }}>Compartilhe este código com seu parceiro para ele entrar:</p>
             <div className="inv-code">{inviteCode}</div>
             <p style={{ color:"var(--text2)", fontSize:12, marginBottom:20 }}>Ele vai criar uma conta e usar esse código para entrar no seu espaço.</p>
-            <button className="btn btn-p btn-lg" onClick={onDone}>Começar a usar -></button>
+            <button className="btn btn-p btn-lg" onClick={onDone}>Começar a usar →</button>
           </div>
         )}
       </div>
@@ -451,8 +451,8 @@ function TxItem({ tx, members, onClick }) {
       <div className="tx-info">
         <div className="tx-desc">{tx.description || cat.name}</div>
         <div className="tx-meta">
-          {cat.name} . {fmtDate(tx.date)} .{" "}
-          {tx.payment_method==="credit" && card ? ` ${card.name}` : tx.payment_method==="debit" ? " Débito" : " Dinheiro"}
+          {cat.name} · {fmtDate(tx.date)} ·{" "}
+          {tx.payment_method==="credit" && card ? `💳 ${card.name}` : tx.payment_method==="debit" ? "🏦 Débito" : "💵 Dinheiro"}
         </div>
       </div>
       {member && (
@@ -461,7 +461,7 @@ function TxItem({ tx, members, onClick }) {
         </div>
       )}
       <div className={`tx-amt ${tx.type}`}>
-        {tx.type==="income"?"+":""}{fmt(tx.amount)}
+        {tx.type==="income"?"+":"−"}{fmt(tx.amount)}
       </div>
     </div>
   );
@@ -498,12 +498,12 @@ function NewTxModal({ onClose, onSave }) {
       <div className="modal">
         <div className="modal-hd">
           <div className="modal-title">Nova Transação</div>
-          <button className="modal-close" onClick={onClose}></button>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="type-tog">
-          <button className={`type-btn ${type==="expense"?"ae":""}`} onClick={() => { setType("expense"); setCatId(""); }}> Despesa</button>
-          <button className={`type-btn ${type==="income"?"ai":""}`}  onClick={() => { setType("income");  setCatId(""); }}> Receita</button>
+          <button className={`type-btn ${type==="expense"?"ae":""}`} onClick={() => { setType("expense"); setCatId(""); }}>↓ Despesa</button>
+          <button className={`type-btn ${type==="income"?"ai":""}`}  onClick={() => { setType("income");  setCatId(""); }}>↑ Receita</button>
         </div>
 
         <div className="amt-wrap">
@@ -530,7 +530,7 @@ function NewTxModal({ onClose, onSave }) {
         <div className="fg">
           <label className="fl">Forma de pagamento</label>
           <div className="pay-grid">
-            {[{id:"debit",l:" Débito"},{id:"credit",l:" Crédito"},{id:"cash",l:" Dinheiro"}].map(p => (
+            {[{id:"debit",l:"🏦 Débito"},{id:"credit",l:"💳 Crédito"},{id:"cash",l:"💵 Dinheiro"}].map(p => (
               <button key={p.id} className={`pay-btn ${pay===p.id?"sel":""}`} onClick={() => setPay(p.id)}>{p.l}</button>
             ))}
           </div>
@@ -551,7 +551,7 @@ function NewTxModal({ onClose, onSave }) {
         </div>
 
         <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={handleSave} disabled={saving||!amount||!catId}>
-          {saving ? <div className="spinner" /> : " Salvar"}
+          {saving ? <div className="spinner" /> : "💾 Salvar"}
         </button>
       </div>
     </div>
@@ -599,9 +599,9 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
   const recent = [...mTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
 
   const alerts = [];
-  if(bal<0) alerts.push({type:"danger",msg:" Gastos superiores às receitas este mês!"});
-  cardUsage.forEach(c => { if(c.used/c.limit>0.8) alerts.push({type:"warn",msg:` ${c.name} está a ${Math.round(c.used/c.limit*100)}% do limite`}); });
-  if(savR<10&&inc>0) alerts.push({type:"info",msg:" Taxa de poupança abaixo de 10%."});
+  if(bal<0) alerts.push({type:"danger",msg:"⚠️ Gastos superiores às receitas este mês!"});
+  cardUsage.forEach(c => { if(c.used/c.limit>0.8) alerts.push({type:"warn",msg:`💳 ${c.name} está a ${Math.round(c.used/c.limit*100)}% do limite`}); });
+  if(savR<10&&inc>0) alerts.push({type:"info",msg:"💡 Taxa de poupança abaixo de 10%."});
 
   return (
     <div className="page">
@@ -611,19 +611,19 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
           <p style={{ color:"var(--text2)",fontSize:13,marginTop:2 }}>Visão completa do casal</p>
         </div>
         <div className="month-nav">
-          <button onClick={()=>onMonthChange(-1)}></button>
+          <button onClick={()=>onMonthChange(-1)}>‹</button>
           <span>{MONTH_NAMES[m]} {y}</span>
-          <button onClick={()=>onMonthChange(1)}></button>
+          <button onClick={()=>onMonthChange(1)}>›</button>
         </div>
       </div>
 
       {alerts.map((a,i) => <div key={i} className={`alert ${a.type}`}>{a.msg}</div>)}
 
       <div className="g4 fade-up" style={{ marginBottom:20 }}>
-        <SC label="Saldo do Mês" value={fmt(bal)} color={bal>=0?"green":"red"} icon="" sub={`Poupança: ${savR}%`} />
-        <SC label="Receitas" value={fmt(inc)} color="green" icon="" sub={`${mTxs.filter(t=>t.type==="income").length} lançamentos`} />
-        <SC label="Despesas" value={fmt(exp)} color="red" icon="" sub={`${mTxs.filter(t=>t.type==="expense").length} lançamentos`} />
-        <SC label="No crédito" value={fmt(cardUsage.reduce((s,c)=>s+c.used,0))} color="blue" icon="" />
+        <SC label="Saldo do Mês" value={fmt(bal)} color={bal>=0?"green":"red"} icon="💰" sub={`Poupança: ${savR}%`} />
+        <SC label="Receitas" value={fmt(inc)} color="green" icon="↑" sub={`${mTxs.filter(t=>t.type==="income").length} lançamentos`} />
+        <SC label="Despesas" value={fmt(exp)} color="red" icon="↓" sub={`${mTxs.filter(t=>t.type==="expense").length} lançamentos`} />
+        <SC label="No crédito" value={fmt(cardUsage.reduce((s,c)=>s+c.used,0))} color="blue" icon="💳" />
       </div>
 
       <div className="g3" style={{ marginBottom:20 }}>
@@ -631,8 +631,8 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
           <div className="sec-hd">
             <div className="sec-title">Evolução Mensal</div>
             <div style={{ display:"flex",gap:12,fontSize:12 }}>
-              <span style={{ color:"var(--green)" }}> Receitas</span>
-              <span style={{ color:"var(--red)" }}> Despesas</span>
+              <span style={{ color:"var(--green)" }}>● Receitas</span>
+              <span style={{ color:"var(--red)" }}>● Despesas</span>
             </div>
           </div>
           <div className="bar-chart">
@@ -675,7 +675,7 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
             return (
               <div key={c.id} style={{ marginBottom:16 }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
-                  <span style={{ fontSize:14,fontWeight:500 }}> {c.name}</span>
+                  <span style={{ fontSize:14,fontWeight:500 }}>💳 {c.name}</span>
                   <span className={`badge ${pct>80?"red":pct>50?"yellow":"green"}`}>{Math.round(pct)}%</span>
                 </div>
                 <div style={{ fontSize:12,color:"var(--text2)",marginBottom:6 }}>{fmt(c.used)} / {fmt(c.limit)}</div>
@@ -706,7 +706,7 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
       <div className="card s5 fade-up">
         <div className="sec-hd"><div className="sec-title">Últimas Transações</div></div>
         {recent.length===0 ? (
-          <div className="empty"><div className="empty-icon"></div><div className="empty-title">Sem transações</div></div>
+          <div className="empty"><div className="empty-icon">📭</div><div className="empty-title">Sem transações</div></div>
         ) : (
           <div className="tx-list">{recent.map(tx => <TxItem key={tx.id} tx={tx} members={members} />)}</div>
         )}
@@ -742,16 +742,16 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
           <p style={{ color:"var(--text2)",fontSize:13 }}>{MONTH_NAMES[m]} {y}</p>
         </div>
         <div className="month-nav">
-          <button onClick={()=>onMonthChange(-1)}></button>
+          <button onClick={()=>onMonthChange(-1)}>‹</button>
           <span>{MONTHS[m]}/{y}</span>
-          <button onClick={()=>onMonthChange(1)}></button>
+          <button onClick={()=>onMonthChange(1)}>›</button>
         </div>
       </div>
 
       <div className="g3 fade-up" style={{ marginBottom:20 }}>
-        <SC label="Receitas" value={fmt(inc)} color="green" icon="" />
-        <SC label="Despesas" value={fmt(exp)} color="red" icon="" />
-        <SC label="Saldo" value={fmt(inc-exp)} color={inc-exp>=0?"green":"red"} icon="" />
+        <SC label="Receitas" value={fmt(inc)} color="green" icon="↑" />
+        <SC label="Despesas" value={fmt(exp)} color="red" icon="↓" />
+        <SC label="Saldo" value={fmt(inc-exp)} color={inc-exp>=0?"green":"red"} icon="💰" />
       </div>
 
       <div className="card fade-up s1">
@@ -762,10 +762,10 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
             </button>
           ))}
           <input className="fi" style={{ marginLeft:"auto",width:"auto",flex:1,maxWidth:200,padding:"6px 12px",fontSize:13 }}
-            placeholder=" Buscar..." value={search} onChange={e=>setSearch(e.target.value)} />
+            placeholder="🔍 Buscar..." value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         {filtered.length===0 ? (
-          <div className="empty"><div className="empty-icon"></div><div className="empty-title">Nenhuma transação</div></div>
+          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transação</div></div>
         ) : (
           <div className="tx-list">{filtered.map(tx=><TxItem key={tx.id} tx={tx} members={members} onClick={setSel} />)}</div>
         )}
@@ -776,7 +776,7 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
           <div className="modal">
             <div className="modal-hd">
               <div className="modal-title">Detalhes</div>
-              <button className="modal-close" onClick={()=>setSel(null)}></button>
+              <button className="modal-close" onClick={()=>setSel(null)}>✕</button>
             </div>
             {(() => {
               const cat=getCat(sel.category_id);
@@ -787,7 +787,7 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
                   <div style={{ textAlign:"center",padding:"16px 0 24px" }}>
                     <div style={{ fontSize:40,marginBottom:8 }}>{cat.emoji}</div>
                     <div className={`stat-val ${sel.type}`} style={{ fontSize:32,fontFamily:"var(--font-d)" }}>
-                      {sel.type==="income"?"+":""}{fmt(sel.amount)}
+                      {sel.type==="income"?"+":"−"}{fmt(sel.amount)}
                     </div>
                     <div style={{ color:"var(--text2)",marginTop:4 }}>{sel.description||cat.name}</div>
                   </div>
@@ -795,7 +795,7 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
                   {[
                     ["Categoria",`${cat.emoji} ${cat.name}`],
                     ["Data",fmtDate(sel.date)],
-                    ["Pagamento",sel.payment_method==="credit"?" Crédito":sel.payment_method==="debit"?" Débito":" Dinheiro"],
+                    ["Pagamento",sel.payment_method==="credit"?"💳 Crédito":sel.payment_method==="debit"?"🏦 Débito":"💵 Dinheiro"],
                     card?["Cartão",card.name]:null,
                     member?["Lançado por",member.display_name]:null,
                   ].filter(Boolean).map(([k,v])=>(
@@ -805,7 +805,7 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
                     </div>
                   ))}
                   <button className="btn btn-d" style={{ width:"100%",marginTop:20 }} onClick={()=>{ onDelete(sel.id); setSel(null); }}>
-                     Excluir
+                    🗑️ Excluir
                   </button>
                 </div>
               );
@@ -852,7 +852,7 @@ function Cards({ txs, members, currentMonth }) {
                 <span className="badge blue">{cTxs.length}</span>
               </div>
               {cTxs.length===0 ? (
-                <div className="empty" style={{ padding:24 }}><div className="empty-icon"></div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem gastos</div></div>
+                <div className="empty" style={{ padding:24 }}><div className="empty-icon">💳</div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem gastos</div></div>
               ) : (
                 <div className="tx-list">{[...cTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=><TxItem key={tx.id} tx={tx} members={members} />)}</div>
               )}
@@ -869,10 +869,10 @@ function Goals({ goals, workspaceId, onRefresh }) {
   const [showNew, setShowNew] = useState(false);
   const [aportGoal, setAportGoal] = useState(null);
   const [aportAmt, setAportAmt] = useState("");
-  const [newG, setNewG] = useState({ name:"", emoji:"", target:"", current:"0", deadline:"" });
+  const [newG, setNewG] = useState({ name:"", emoji:"🎯", target:"", current:"0", deadline:"" });
   const [saving, setSaving] = useState(false);
 
-  const emojis = ["","","","","","","","","","","",""];
+  const emojis = ["🎯","✈️","🏠","🚗","💻","📱","🛡️","💍","🎓","🏖️","💪","🎮"];
 
   async function createGoal() {
     if(!newG.name||!newG.target) return;
@@ -913,9 +913,9 @@ function Goals({ goals, workspaceId, onRefresh }) {
                 <div style={{ width:44,height:44,borderRadius:12,background:done?"var(--green-dim)":"var(--surface2)",fontSize:22,display:"flex",alignItems:"center",justifyContent:"center" }}>{g.emoji}</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:600 }}>{g.name}</div>
-                  {dl&&<div style={{ fontSize:12,color:days<30?"var(--red)":"var(--text2)" }}>{done?" Concluída!":days>0?`${days} dias restantes`:"Prazo encerrado"}</div>}
+                  {dl&&<div style={{ fontSize:12,color:days<30?"var(--red)":"var(--text2)" }}>{done?"✅ Concluída!":days>0?`${days} dias restantes`:"Prazo encerrado"}</div>}
                 </div>
-                {done&&<span className="badge green"></span>}
+                {done&&<span className="badge green">✓</span>}
               </div>
               <div style={{ display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6 }}>
                 <span style={{ fontFamily:"var(--font-d)",fontWeight:700,color:"var(--green)" }}>{fmt(g.current)}</span>
@@ -933,12 +933,12 @@ function Goals({ goals, workspaceId, onRefresh }) {
         })}
       </div>
 
-      {goals.length===0&&<div className="empty"><div className="empty-icon"></div><div className="empty-title">Nenhuma meta</div><div style={{ fontSize:13 }}>Defina objetivos financeiros para o casal</div></div>}
+      {goals.length===0&&<div className="empty"><div className="empty-icon">🎯</div><div className="empty-title">Nenhuma meta</div><div style={{ fontSize:13 }}>Defina objetivos financeiros para o casal</div></div>}
 
       {showNew&&(
         <div className="overlay" onClick={e=>e.target===e.currentTarget&&setShowNew(false)}>
           <div className="modal">
-            <div className="modal-hd"><div className="modal-title">Nova Meta</div><button className="modal-close" onClick={()=>setShowNew(false)}></button></div>
+            <div className="modal-hd"><div className="modal-title">Nova Meta</div><button className="modal-close" onClick={()=>setShowNew(false)}>✕</button></div>
             <div className="fg">
               <label className="fl">Ícone</label>
               <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
@@ -954,7 +954,7 @@ function Goals({ goals, workspaceId, onRefresh }) {
             </div>
             <div className="fg"><label className="fl">Prazo</label><input className="fi" type="date" value={newG.deadline} onChange={e=>setNewG(g=>({...g,deadline:e.target.value}))} /></div>
             <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={createGoal} disabled={saving||!newG.name||!newG.target}>
-              {saving?<div className="spinner"/>:" Criar meta"}
+              {saving?<div className="spinner"/>:"🎯 Criar meta"}
             </button>
           </div>
         </div>
@@ -963,10 +963,10 @@ function Goals({ goals, workspaceId, onRefresh }) {
       {aportGoal&&(
         <div className="overlay" onClick={e=>e.target===e.currentTarget&&setAportGoal(null)}>
           <div className="modal">
-            <div className="modal-hd"><div className="modal-title">Aportar em {aportGoal.emoji} {aportGoal.name}</div><button className="modal-close" onClick={()=>setAportGoal(null)}></button></div>
+            <div className="modal-hd"><div className="modal-title">Aportar em {aportGoal.emoji} {aportGoal.name}</div><button className="modal-close" onClick={()=>setAportGoal(null)}>✕</button></div>
             <div style={{ fontSize:13,color:"var(--text2)",marginBottom:12 }}>{fmt(aportGoal.current)} / {fmt(aportGoal.target)}</div>
             <div className="amt-wrap"><span className="amt-pre">R$</span><input className="amt-inp" type="number" placeholder="0,00" value={aportAmt} onChange={e=>setAportAmt(e.target.value)} autoFocus /></div>
-            <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={()=>aport(aportGoal)} disabled={!aportAmt}> Confirmar aporte</button>
+            <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={()=>aport(aportGoal)} disabled={!aportAmt}>💰 Confirmar aporte</button>
           </div>
         </div>
       )}
@@ -1078,7 +1078,7 @@ function Reports({ txs, members }) {
         <div style={{ fontSize:14,marginBottom:16 }}><span style={{ color:"var(--text2)" }}>Membros: </span><strong>{members.length}</strong></div>
         <div className="fl" style={{ marginBottom:8 }}>Código de convite para o parceiro</div>
         <div className="inv-code" style={{ fontSize:22,letterSpacing:4 }}>{workspace.invite_code}</div>
-        <button className="btn btn-g" style={{ width:"100%" }} onClick={copy}>{copied?" Copiado!":" Copiar código"}</button>
+        <button className="btn btn-g" style={{ width:"100%" }} onClick={copy}>{copied?"✅ Copiado!":"📋 Copiar código"}</button>
       </div>
 
       <div className="card fade-up s1" style={{ marginBottom:16 }}>
@@ -1097,7 +1097,7 @@ function Reports({ txs, members }) {
 
       <div className="card fade-up s2">
         <div className="sec-title" style={{ marginBottom:16 }}>Conta</div>
-        <button className="btn btn-d" style={{ width:"100%" }} onClick={onSignOut}>Sair da conta</button>
+        <button className="btn btn-d" style={{ width:"100%" }} onClick={onSignOut}>🚪 Sair da conta</button>
       </div>
     </div>
   );
@@ -1117,40 +1117,40 @@ function irAliq(meses) {
 }
 const INVS = [
   {
-    id:"tesouro", classe:"c1", emoji:"", emojiBg:"rgba(0,229,160,0.12)",
-    titulo:"Tesouro Selic", subtitulo:"Título público federal - garantia do governo",
+    id:"tesouro", classe:"c1", emoji:"🏛️", emojiBg:"rgba(0,229,160,0.12)",
+    titulo:"Tesouro Selic", subtitulo:"Título público federal — garantia do governo",
     badges:[{t:"Mais seguro do Brasil",c:"green"},{t:"Liquidez diária",c:"green"},{t:"Pós-fixado",c:"blue"}],
     taxaBruta: CDI_RATE, isento: false,
     descricao:"O investimento mais seguro do Brasil. Garantido pelo governo federal, rende próximo ao CDI e pode ser resgatado qualquer dia útil. Ideal para reserva de emergência.",
-    pros:["Garantia do governo federal - risco zero","Liquidez diária: resgate a qualquer momento","Aplicação mínima de R$ 35","Rende ~2,5x mais que a poupança"],
+    pros:["Garantia do governo federal — risco zero","Liquidez diária: resgate a qualquer momento","Aplicação mínima de R$ 35","Rende ~2,5x mais que a poupança"],
     contras:["Incide Imposto de Renda (15% a 22,5%)","Rentabilidade cai junto com a Selic"],
     perfil:"Reserva de emergência e curto prazo", prazo:"Qualquer prazo", minimo:"R$ 35",
-    ir:"Sim - tabela regressiva (15% a 22,5%)", fgc:"Não precisa - garantia do governo",
-    plataformas:[{n:"Tesouro Direto (oficial)",d:"Sem taxa de custódia",i:""},{n:"NuInvest / Rico / XP",d:"Acesso gratuito, sem taxas",i:""}],
+    ir:"Sim — tabela regressiva (15% a 22,5%)", fgc:"Não precisa — garantia do governo",
+    plataformas:[{n:"Tesouro Direto (oficial)",d:"Sem taxa de custódia",i:"🇧🇷"},{n:"NuInvest / Rico / XP",d:"Acesso gratuito, sem taxas",i:"📱"}],
   },
   {
-    id:"lci", classe:"c2", emoji:"", emojiBg:"rgba(77,159,255,0.12)",
-    titulo:"LCI / LCA", subtitulo:"Letras de Crédito - isentas de Imposto de Renda",
-    badges:[{t:"Isento de IR ",c:"yellow"},{t:"FGC até R$250k",c:"green"},{t:"Médio prazo",c:"blue"}],
+    id:"lci", classe:"c2", emoji:"🌿", emojiBg:"rgba(77,159,255,0.12)",
+    titulo:"LCI / LCA", subtitulo:"Letras de Crédito — isentas de Imposto de Renda",
+    badges:[{t:"Isento de IR ✓",c:"yellow"},{t:"FGC até R$250k",c:"green"},{t:"Médio prazo",c:"blue"}],
     taxaBruta: CDI_RATE * 0.91, isento: true,
     descricao:"LCI e LCA são isentos de IR para pessoa física. Com Selic a 14,75%, pagar 91% do CDI sem IR equivale a CDB de 107% do CDI. Melhor rentabilidade líquida do mercado conservador.",
     pros:["Isenção total de Imposto de Renda","Protegido pelo FGC até R$ 250 mil","Rentabilidade líquida superior ao CDB na maioria dos prazos","Disponível em bancos digitais"],
-    contras:["Prazo mínimo de 9 meses sem liquidez","Não serve para reserva de emergência","Taxas variam - pesquise sempre"],
-    perfil:"Médio prazo - após ter reserva formada", prazo:"9 meses a 3 anos", minimo:"R$ 1.000 (varia por banco)",
-    ir:"Isento para pessoa física", fgc:"Sim - até R$ 250 mil por CPF/banco",
-    plataformas:[{n:"Banco Inter / C6 Bank",d:"Boa variedade de LCI/LCA",i:""},{n:"XP / BTG Pactual",d:"Acesso a múltiplos emissores",i:""}],
+    contras:["Prazo mínimo de 9 meses sem liquidez","Não serve para reserva de emergência","Taxas variam — pesquise sempre"],
+    perfil:"Médio prazo — após ter reserva formada", prazo:"9 meses a 3 anos", minimo:"R$ 1.000 (varia por banco)",
+    ir:"Isento para pessoa física", fgc:"Sim — até R$ 250 mil por CPF/banco",
+    plataformas:[{n:"Banco Inter / C6 Bank",d:"Boa variedade de LCI/LCA",i:"🏦"},{n:"XP / BTG Pactual",d:"Acesso a múltiplos emissores",i:"📊"}],
   },
   {
-    id:"cdb", classe:"c3", emoji:"", emojiBg:"rgba(255,209,102,0.12)",
-    titulo:"CDB 110%+ CDI", subtitulo:"Certificado de Depósito Bancário - bancos médios",
+    id:"cdb", classe:"c3", emoji:"📈", emojiBg:"rgba(255,209,102,0.12)",
+    titulo:"CDB 110%+ CDI", subtitulo:"Certificado de Depósito Bancário — bancos médios",
     badges:[{t:"110% do CDI",c:"yellow"},{t:"FGC até R$250k",c:"green"},{t:"Liquidez diária (alguns)",c:"blue"}],
     taxaBruta: CDI_RATE * 1.10, isento: false,
-    descricao:"CDBs de bancos médios chegam a 110%-115% do CDI. Com FGC até R$250k, têm risco controlado. Bom para quem já tem reserva de emergência e quer rentabilidade maior.",
+    descricao:"CDBs de bancos médios chegam a 110%–115% do CDI. Com FGC até R$250k, têm risco controlado. Bom para quem já tem reserva de emergência e quer rentabilidade maior.",
     pros:["Rentabilidade bruta superior ao Tesouro","FGC garante até R$ 250 mil","Alguns com liquidez diária","Fácil de comprar em apps"],
     contras:["Incide Imposto de Renda","Bancos menores têm risco maior","Liquidez pode ser restrita antes do vencimento"],
-    perfil:"Curto a médio prazo - após ter reserva", prazo:"30 dias a 2 anos", minimo:"R$ 1 (varia por banco)",
-    ir:"Sim - tabela regressiva (15% a 22,5%)", fgc:"Sim - até R$ 250 mil por CPF/banco",
-    plataformas:[{n:"PicPay Invest / Nubank",d:"CDBs com liquidez diária",i:""},{n:"Renda Fixa / Empiricus",d:"Acesso a bancos médios",i:""}],
+    perfil:"Curto a médio prazo — após ter reserva", prazo:"30 dias a 2 anos", minimo:"R$ 1 (varia por banco)",
+    ir:"Sim — tabela regressiva (15% a 22,5%)", fgc:"Sim — até R$ 250 mil por CPF/banco",
+    plataformas:[{n:"PicPay Invest / Nubank",d:"CDBs com liquidez diária",i:"📱"},{n:"Renda Fixa / Empiricus",d:"Acesso a bancos médios",i:"🏦"}],
   },
 ];
 
@@ -1171,7 +1171,7 @@ function InvCard({ inv, valor, meses }) {
         <div style={{ flex:1 }}>
           <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}>
             <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700 }}>{inv.titulo}</div>
-            <span style={{ fontSize:11,color:"var(--text2)" }}>{aberto?"":""}</span>
+            <span style={{ fontSize:11,color:"var(--text2)" }}>{aberto?"▲":"▽"}</span>
           </div>
           <div style={{ fontSize:12,color:"var(--text2)" }}>{inv.subtitulo}</div>
         </div>
@@ -1196,7 +1196,7 @@ function InvCard({ inv, valor, meses }) {
         ))}
       </div>
       <div style={{ background:"var(--surface3)",borderRadius:8,padding:12,marginBottom:aberto?12:0 }} onClick={e=>e.stopPropagation()}>
-        <div style={{ fontSize:10,fontWeight:600,color:"var(--text2)",marginBottom:8,letterSpacing:.6,textTransform:"uppercase" }}> Simulação: {fmt(valor)} por {meses} meses</div>
+        <div style={{ fontSize:10,fontWeight:600,color:"var(--text2)",marginBottom:8,letterSpacing:.6,textTransform:"uppercase" }}>💰 Simulação: {fmt(valor)} por {meses} meses</div>
         {[
           ["Rendimento bruto",fmt(rendBruto),"var(--text)"],
           ["IR descontado",inv.isento?"R$ 0,00 (isento)":fmt(irPago),inv.isento?"var(--green)":"var(--red)"],
@@ -1212,14 +1212,14 @@ function InvCard({ inv, valor, meses }) {
       {aberto && (
         <div onClick={e=>e.stopPropagation()}>
           <div style={{ display:"flex",gap:3,marginBottom:12,background:"var(--surface3)",padding:3,borderRadius:8 }}>
-            {[["resumo"," Resumo"],["procon"," Prós/Contras"],["onde"," Onde abrir"]].map(([id,lbl])=>(
+            {[["resumo","📋 Resumo"],["procon","✅ Prós/Contras"],["onde","🏦 Onde abrir"]].map(([id,lbl])=>(
               <button key={id} style={{ flex:1,padding:"7px 4px",borderRadius:6,fontSize:11,fontWeight:500,cursor:"pointer",color:aba===id?"var(--green)":"var(--text2)",background:aba===id?"var(--green-dim)":"transparent",border:"none",transition:"all .15s" }} onClick={()=>setAba(id)}>{lbl}</button>
             ))}
           </div>
           {aba==="resumo" && (
             <div>
               <p style={{ fontSize:13,color:"var(--text2)",lineHeight:1.6,marginBottom:12 }}>{inv.descricao}</p>
-              {[[" Para quem",inv.perfil],[" Prazo",inv.prazo],[" Mínimo",inv.minimo],[" IR",inv.ir],[" FGC",inv.fgc]].map(([k,v])=>(
+              {[["🎯 Para quem",inv.perfil],["⏱️ Prazo",inv.prazo],["💵 Mínimo",inv.minimo],["🧾 IR",inv.ir],["🛡️ FGC",inv.fgc]].map(([k,v])=>(
                 <div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)",fontSize:13 }}>
                   <span style={{ color:"var(--text2)" }}>{k}</span>
                   <span style={{ fontWeight:500,textAlign:"right",maxWidth:"55%" }}>{v}</span>
@@ -1230,11 +1230,11 @@ function InvCard({ inv, valor, meses }) {
           {aba==="procon" && (
             <div>
               <div style={{ marginBottom:12 }}>
-                <div style={{ fontSize:11,fontWeight:600,color:"var(--green)",marginBottom:8 }}> VANTAGENS</div>
-                {inv.pros.map((p,i)=><div key={i} style={{ display:"flex",gap:8,fontSize:12,color:"var(--text2)",padding:"4px 0" }}><span style={{ color:"var(--green)",flexShrink:0 }}></span>{p}</div>)}
+                <div style={{ fontSize:11,fontWeight:600,color:"var(--green)",marginBottom:8 }}>✅ VANTAGENS</div>
+                {inv.pros.map((p,i)=><div key={i} style={{ display:"flex",gap:8,fontSize:12,color:"var(--text2)",padding:"4px 0" }}><span style={{ color:"var(--green)",flexShrink:0 }}>✓</span>{p}</div>)}
               </div>
               <div>
-                <div style={{ fontSize:11,fontWeight:600,color:"var(--orange)",marginBottom:8 }}> PONTOS DE ATENÇÃO</div>
+                <div style={{ fontSize:11,fontWeight:600,color:"var(--orange)",marginBottom:8 }}>⚠️ PONTOS DE ATENÇÃO</div>
                 {inv.contras.map((c,i)=><div key={i} style={{ display:"flex",gap:8,fontSize:12,color:"var(--text2)",padding:"4px 0" }}><span style={{ color:"var(--orange)",flexShrink:0 }}>!</span>{c}</div>)}
               </div>
             </div>
@@ -1247,7 +1247,7 @@ function InvCard({ inv, valor, meses }) {
                   <div><div style={{ fontWeight:500 }}>{p.n}</div><div style={{ fontSize:11,color:"var(--text2)" }}>{p.d}</div></div>
                 </div>
               ))}
-              <div style={{ marginTop:10,padding:10,background:"var(--surface3)",borderRadius:8,fontSize:12,color:"var(--text2)" }}> Compare sempre a rentabilidade líquida (após IR) antes de escolher.</div>
+              <div style={{ marginTop:10,padding:10,background:"var(--surface3)",borderRadius:8,fontSize:12,color:"var(--text2)" }}>💡 Compare sempre a rentabilidade líquida (após IR) antes de escolher.</div>
             </div>
           )}
         </div>
@@ -1266,22 +1266,22 @@ function Investimentos() {
     <div className="page">
       <div style={{ marginBottom:20 }}>
         <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,letterSpacing:"-.5px" }}>Investimentos</h1>
-        <p style={{ color:"var(--text2)",fontSize:13,marginTop:2 }}>Top 3 opções seguras - Selic {SELIC}% a.a. . abril/2026</p>
+        <p style={{ color:"var(--text2)",fontSize:13,marginTop:2 }}>Top 3 opções seguras — Selic {SELIC}% a.a. · abril/2026</p>
       </div>
 
       {/* alertas personalizados */}
       <div style={{ display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:10,fontSize:13,marginBottom:10,background:"var(--red-dim)",border:"1px solid rgba(255,77,109,.2)",color:"#fca5a5" }}>
-        <span style={{ fontSize:16,flexShrink:0 }}></span>
-        <div><strong>Seu momento atual:</strong> Com R$ 12.000 no cheque especial a ~8%/mês, quitar essa dívida é o melhor "investimento" agora. Cada mês custa ~R$ 960 em juros - nenhum investimento paga isso.</div>
+        <span style={{ fontSize:16,flexShrink:0 }}>🚨</span>
+        <div><strong>Seu momento atual:</strong> Com R$ 12.000 no cheque especial a ~8%/mês, quitar essa dívida é o melhor "investimento" agora. Cada mês custa ~R$ 960 em juros — nenhum investimento paga isso.</div>
       </div>
       <div style={{ display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:10,fontSize:13,marginBottom:20,background:"var(--green-dim)",border:"1px solid rgba(0,229,160,.2)",color:"#6ee7b7" }}>
-        <span style={{ fontSize:16,flexShrink:0 }}></span>
+        <span style={{ fontSize:16,flexShrink:0 }}>✅</span>
         <div><strong>Quando começar:</strong> Após zerar o cheque especial, monte reserva no Tesouro Selic (R$ 24k a R$ 48k). Depois migre para LCI/LCA e CDB.</div>
       </div>
 
       {/* simulador */}
       <div className="card fade-up" style={{ marginBottom:16 }}>
-        <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700,marginBottom:4 }}> Simulador</div>
+        <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700,marginBottom:4 }}>🧮 Simulador</div>
         <div style={{ fontSize:13,color:"var(--text2)",marginBottom:14 }}>Ajuste os valores e compare em tempo real</div>
         <div style={{ marginBottom:14 }}>
           <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--text2)",marginBottom:6 }}>
@@ -1301,7 +1301,7 @@ function Investimentos() {
         </div>
         {meses < 9 && (
           <div style={{ display:"flex",gap:8,padding:"10px 12px",borderRadius:8,fontSize:12,background:"var(--yellow-dim)",border:"1px solid rgba(255,209,102,.2)",color:"var(--yellow)",marginBottom:12 }}>
-            <span></span><span>LCI/LCA exigem prazo mínimo de 9 meses. Use Tesouro Selic ou CDB para prazos menores.</span>
+            <span>⚠️</span><span>LCI/LCA exigem prazo mínimo de 9 meses. Use Tesouro Selic ou CDB para prazos menores.</span>
           </div>
         )}
         <div style={{ fontSize:11,color:"var(--text2)",marginBottom:10 }}>Rendimento líquido em {meses} {meses===1?"mês":"meses"}:</div>
@@ -1329,14 +1329,14 @@ function Investimentos() {
 
       {/* comparativo geral */}
       <div className="card fade-up" style={{ marginBottom:16 }}>
-        <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700,marginBottom:4 }}> Comparativo - Rentabilidade Líquida/Ano</div>
-        <div style={{ fontSize:12,color:"var(--text2)",marginBottom:14 }}>Selic {SELIC}% . CDI {CDI_RATE}% . IPCA {IPCA_RATE}% - abril/2026</div>
+        <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700,marginBottom:4 }}>📊 Comparativo — Rentabilidade Líquida/Ano</div>
+        <div style={{ fontSize:12,color:"var(--text2)",marginBottom:14 }}>Selic {SELIC}% · CDI {CDI_RATE}% · IPCA {IPCA_RATE}% — abril/2026</div>
         {[
-          { n:"Poupança",          v:6.17,             c:"var(--text2)", nota:" Abaixo da inflação" },
-          { n:"Tesouro Selic",     v:CDI_RATE*0.85,    c:"var(--green)", nota:" Ideal para reserva" },
-          { n:"LCI/LCA (91%CDI)", v:CDI_RATE*0.91,    c:"var(--blue)",  nota:" Melhor líquido" },
-          { n:"CDB (110%CDI)",    v:CDI_RATE*1.10*0.85,c:"var(--yellow)",nota:" Boa rentabilidade" },
-          { n:"Cheque especial",  v:96,                c:"var(--red)",   nota:" Custo: até 96%/ano!" },
+          { n:"Poupança",          v:6.17,             c:"var(--text2)", nota:"❌ Abaixo da inflação" },
+          { n:"Tesouro Selic",     v:CDI_RATE*0.85,    c:"var(--green)", nota:"✅ Ideal para reserva" },
+          { n:"LCI/LCA (91%CDI)", v:CDI_RATE*0.91,    c:"var(--blue)",  nota:"⭐ Melhor líquido" },
+          { n:"CDB (110%CDI)",    v:CDI_RATE*1.10*0.85,c:"var(--yellow)",nota:"✅ Boa rentabilidade" },
+          { n:"Cheque especial",  v:96,                c:"var(--red)",   nota:"🚨 Custo: até 96%/ano!" },
         ].map((r,i)=>(
           <div key={i} style={{ display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<4?"1px solid var(--border)":"none" }}>
             <div style={{ width:130,flexShrink:0 }}>
@@ -1353,13 +1353,13 @@ function Investimentos() {
 
       {/* roadmap */}
       <div className="card fade-up" style={{ marginBottom:16 }}>
-        <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700,marginBottom:4 }}> Seu Roadmap de Investimentos</div>
+        <div style={{ fontFamily:"var(--font-d)",fontSize:15,fontWeight:700,marginBottom:4 }}>🗺️ Seu Roadmap de Investimentos</div>
         <div style={{ fontSize:12,color:"var(--text2)",marginBottom:14 }}>Ordem certa para o perfil de vocês</div>
         {[
-          { n:"1", titulo:"AGORA - Quitar cheque especial (R$ 12.000)", desc:`Cada mês custa ~R$ 960 em juros. Coloque toda sobra aqui. Estimativa: ${Math.ceil(12000/800)} meses guardando R$ 800/mês.`, urgente:true },
-          { n:"2", titulo:"Após quitar - Tesouro Selic como reserva", desc:"Guarde 3 a 6 meses de gastos (R$ 24k a R$ 48k). Liquidez diária, risco zero. Sua rede de segurança.", urgente:false },
-          { n:"3", titulo:"Médio prazo - LCI/LCA para render mais", desc:"Com reserva formada, aplique o excedente em LCI/LCA. Melhor rentabilidade líquida, sem IR e com FGC.", urgente:false },
-          { n:"4", titulo:"Longo prazo - Diversificar com CDB", desc:"Com R$ 50k+ investido, diversifique com CDBs de bancos médios para maximizar rendimentos.", urgente:false },
+          { n:"1", titulo:"AGORA — Quitar cheque especial (R$ 12.000)", desc:`Cada mês custa ~R$ 960 em juros. Coloque toda sobra aqui. Estimativa: ${Math.ceil(12000/800)} meses guardando R$ 800/mês.`, urgente:true },
+          { n:"2", titulo:"Após quitar — Tesouro Selic como reserva", desc:"Guarde 3 a 6 meses de gastos (R$ 24k a R$ 48k). Liquidez diária, risco zero. Sua rede de segurança.", urgente:false },
+          { n:"3", titulo:"Médio prazo — LCI/LCA para render mais", desc:"Com reserva formada, aplique o excedente em LCI/LCA. Melhor rentabilidade líquida, sem IR e com FGC.", urgente:false },
+          { n:"4", titulo:"Longo prazo — Diversificar com CDB", desc:"Com R$ 50k+ investido, diversifique com CDBs de bancos médios para maximizar rendimentos.", urgente:false },
         ].map((p,i)=>(
           <div key={i} style={{ display:"flex",gap:12,padding:"12px 0",borderBottom:i<3?"1px solid var(--border)":"none" }}>
             <div style={{ width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"monospace",fontSize:12,fontWeight:700,flexShrink:0,background:p.urgente?"var(--red-dim)":"var(--surface2)",color:p.urgente?"var(--red)":"var(--text2)",border:p.urgente?"1px solid rgba(255,77,109,.3)":"1px solid var(--border)" }}>{p.n}</div>
@@ -1374,7 +1374,7 @@ function Investimentos() {
       </div>
 
       <div style={{ fontSize:11,color:"var(--text2)",opacity:.6,textAlign:"center",padding:"10px",border:"1px solid var(--border)",borderRadius:8,lineHeight:1.6 }}>
-         Indicador educacional - não constitui recomendação de investimento. Taxas baseadas na Selic de {SELIC}% a.a. (abril/2026). Consulte um assessor CFP antes de investir.
+        ⚠️ Indicador educacional — não constitui recomendação de investimento. Taxas baseadas na Selic de {SELIC}% a.a. (abril/2026). Consulte um assessor CFP antes de investir.
       </div>
     </div>
   );
@@ -1481,13 +1481,13 @@ export default function App() {
   const currentMember = members.find(m => m.user_id === session?.user?.id);
 
   const navItems = [
-    { id:"dashboard",    icon:"", label:"Dashboard" },
-    { id:"transactions", icon:"", label:"Transações" },
-    { id:"cards",        icon:"", label:"Cartões" },
-    { id:"goals",        icon:"", label:"Metas" },
-    { id:"reports",      icon:"", label:"Relatórios" },
-    { id:"investimentos",icon:"", label:"Investimentos" },
-    { id:"settings",     icon:"",  label:"Configurações" },
+    { id:"dashboard",    icon:"📊", label:"Dashboard" },
+    { id:"transactions", icon:"💸", label:"Transações" },
+    { id:"cards",        icon:"💳", label:"Cartões" },
+    { id:"goals",        icon:"🎯", label:"Metas" },
+    { id:"reports",      icon:"📈", label:"Relatórios" },
+    { id:"investimentos",icon:"💰", label:"Investimentos" },
+    { id:"settings",     icon:"⚙️",  label:"Configurações" },
   ];
   const pageLabels = { dashboard:"Dashboard",transactions:"Transações",cards:"Cartões",goals:"Metas",reports:"Relatórios",investimentos:"Investimentos",settings:"Configurações" };
 
