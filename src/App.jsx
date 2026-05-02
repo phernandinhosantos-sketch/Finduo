@@ -272,7 +272,7 @@ function AuthScreen({ onAuth }) {
         <div style={{ fontSize:48, marginBottom:16 }}>📧</div>
         <h2 style={{ fontFamily:"var(--font-d)", fontSize:22, fontWeight:800, marginBottom:8 }}>Confirme seu e-mail</h2>
         <p style={{ color:"var(--text2)", fontSize:14 }}>Enviamos um link de confirmação para <strong style={{ color:"var(--text)" }}>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta.</p>
-        <button className="btn btn-g" style={{ marginTop:20 }} onClick={() => { setDone(false); setMode("login"); }}>← Voltar ao login</button>
+        <button className="btn btn-g" style={{ marginTop:20 }} onClick={() => { setDone(false); setMode("login"); }} Voltar ao login</button>
       </div>
     </div>
   );
