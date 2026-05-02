@@ -1097,7 +1097,7 @@ function Reports({ txs, members }) {
 
       <div className="card fade-up s2">
         <div className="sec-title" style={{ marginBottom:16 }}>Conta</div>
-        <button className="btn btn-d" style={{ width:"100%" }} onClick={onSignOut}>🚪 Sair da conta</button>
+        <button className="btn btn-d" style={{ width:"100%" }} onClick={onSignOut}> Sair da conta</button>
       </div>
     </div>
   );
