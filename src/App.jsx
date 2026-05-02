@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 // - SUPABASE -
 const SUPABASE_URL = "https://winfxmdkqjpwpgthuhgt.supabase.co";
@@ -272,7 +272,7 @@ function AuthScreen({ onAuth }) {
         <div style={{ fontSize:48, marginBottom:16 }}>📧</div>
         <h2 style={{ fontFamily:"var(--font-d)", fontSize:22, fontWeight:800, marginBottom:8 }}>Confirme seu e-mail</h2>
         <p style={{ color:"var(--text2)", fontSize:14 }}>Enviamos um link de confirmação para <strong style={{ color:"var(--text)" }}>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta.</p>
-        <button className="btn btn-g" style={{ marginTop:20 }} onClick={() => { setDone(false); setMode("login"); }}>← Voltar ao login</button>
+        <button className="btn btn-g" style={{ marginTop:20 }} onClick={() => { setDone(false); setMode("login"); }}>Voltar ao login</button>
       </div>
     </div>
   );
@@ -1069,6 +1069,16 @@ function Reports({ txs, members }) {
   );
 }
 
+function Settings({ workspace, members, currentMember, onSignOut }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(workspace.invite_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+
+  return (
     <div className="page">
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:24 }}>Configurações</h1>
 
