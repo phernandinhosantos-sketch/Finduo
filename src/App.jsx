@@ -23,8 +23,9 @@ const CATEGORIES = [
 ];
 
 const CREDIT_CARDS_DEFAULT = [
-  { id: "cc1", name: "Nubank",  limit: 8000, closingDay: 3,  dueDay: 10, color: "#8b5cf6" },
-  { id: "cc2", name: "Itaú",   limit: 5000, closingDay: 20, dueDay: 27, color: "#f59e0b" },
+  { id: "cc1",                 name: "Itau 2130",        limit: 8165.00,  closingDay: 3, dueDay: 10, color: "#f59e0b" },
+  { id: "cc2",                 name: "Itau 0087",        limit: 4000.00,  closingDay: 3, dueDay: 10, color: "#fb923c" },
+  { id: "cc_santander_debora", name: "Santander 2569",   limit: 10897.74, closingDay: 3, dueDay: 10, color: "#ef4444" },
 ];
 
 const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -1068,16 +1069,6 @@ function Reports({ txs, members }) {
   );
 }
 
-function Settings({ workspace, members, currentMember, onSignOut }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(workspace.invite_code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
-  };
-
-  return (
     <div className="page">
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:24 }}>Configurações</h1>
 
