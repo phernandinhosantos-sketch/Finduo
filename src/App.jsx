@@ -31,6 +31,7 @@ const CREDIT_CARDS_DEFAULT = [
 const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const USER_COLORS = ["#00e5a0","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
+const CONTROL_START = { y: 2026, m: 4 };
 
 // - HELPERS -
 const fmt = n => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n||0);
@@ -49,6 +50,17 @@ function isInCardInvoice(date, y, m, card) {
   const d = localDate(date);
   const { start, end } = getCardInvoiceRange(y, m, card);
   return d >= start && d <= end;
+}
+function isInMonth(date, y, m) {
+  const d = localDate(date);
+  return d.getFullYear() === y && d.getMonth() === m;
+}
+function isInDashboardPeriod(tx, y, m) {
+  if (tx.payment_method === "credit" && tx.credit_card_id) {
+    const card = getCard(tx.credit_card_id);
+    return card ? isInCardInvoice(tx.date, y, m, card) : isInMonth(tx.date, y, m);
+  }
+  return isInMonth(tx.date, y, m);
 }
 
 // - CSS -
@@ -775,7 +787,7 @@ function SC({ label, value, color, icon, sub }) {
 // - DASHBOARD -
 function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
   const [y, m] = currentMonth;
-  const mTxs = txs.filter(t => { const d=new Date(t.date+"T12:00"); return d.getFullYear()===y && d.getMonth()===m; });
+  const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
 
   const inc  = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
   const exp  = mTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
@@ -786,10 +798,12 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
   mTxs.filter(t=>t.type==="expense").forEach(t => { byCat[t.category_id]=(byCat[t.category_id]||0)+Number(t.amount); });
   const catList = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
 
-  const barData = Array.from({length:6},(_,i) => {
-    const mi = ((m-5+i)+12)%12;
-    const yi = m-5+i<0?y-1:y;
-    const bd = txs.filter(t=>{ const d=new Date(t.date+"T12:00"); return d.getFullYear()===yi&&d.getMonth()===mi; });
+  const monthCount = Math.max(1, Math.min(6, (y - CONTROL_START.y) * 12 + (m - CONTROL_START.m) + 1));
+  const barData = Array.from({length:monthCount},(_,i) => {
+    const base = CONTROL_START.m + i;
+    const yi = CONTROL_START.y + Math.floor(base / 12);
+    const mi = base % 12;
+    const bd = txs.filter(t=>isInDashboardPeriod(t, yi, mi));
     return { label:MONTHS[mi], inc:bd.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0), exp:bd.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0) };
   });
   const maxBar = Math.max(...barData.map(b=>Math.max(b.inc,b.exp)),1);
@@ -1019,15 +1033,25 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
 }
 
 // - CARTÕES -
-function Cards({ txs, members, currentMonth, onImport }) {
+function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
   const [showImport, setShowImport] = useState(false);
+  const [selected, setSelected] = useState([]);
   const [y, m] = currentMonth;
-  const mTxs = txs.filter(t=>{ const d=new Date(t.date+"T12:00"); return d.getFullYear()===y&&d.getMonth()===m; });
+  const toggleSelected = id => setSelected(ids => ids.includes(id) ? ids.filter(x=>x!==id) : [...ids, id]);
+  async function deleteSelected() {
+    if(!selected.length) return;
+    if(!window.confirm(`Excluir ${selected.length} lançamento(s) selecionado(s)?`)) return;
+    await onDeleteSelected(selected);
+    setSelected([]);
+  }
   return (
     <div className="page">
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:6 }}>Cartões de Crédito</h1>
       <p style={{ color:"var(--text2)",fontSize:13,marginBottom:24 }}>Faturas com vencimento em {MONTH_NAMES[m]} {y}</p>
-      <button className="btn btn-p" style={{ marginBottom:20 }} onClick={()=>setShowImport(true)}>Importar fatura</button>
+      <div style={{ display:"flex",gap:10,marginBottom:20 }}>
+        <button className="btn btn-p" onClick={()=>setShowImport(true)}>Importar fatura</button>
+        <button className="btn btn-d" onClick={deleteSelected} disabled={!selected.length}>Excluir selecionados {selected.length?`(${selected.length})`:""}</button>
+      </div>
       <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
         {CREDIT_CARDS_DEFAULT.map(card=>{
           const cycle = getCardInvoiceRange(y, m, card);
@@ -1058,7 +1082,12 @@ function Cards({ txs, members, currentMonth, onImport }) {
               {cTxs.length===0 ? (
                 <div className="empty" style={{ padding:24 }}><div className="empty-icon">💳</div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem gastos</div></div>
               ) : (
-                <div className="tx-list">{[...cTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=><TxItem key={tx.id} tx={tx} members={members} />)}</div>
+                <div className="tx-list">{[...cTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>(
+                  <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:10 }}>
+                    <input type="checkbox" checked={selected.includes(tx.id)} onChange={()=>toggleSelected(tx.id)} />
+                    <div style={{ flex:1 }}><TxItem tx={tx} members={members} /></div>
+                  </div>
+                ))}</div>
               )}
             </div>
           );
@@ -1689,6 +1718,13 @@ export default function App() {
     addToast("Transação removida");
   }
 
+  async function deleteTxs(ids) {
+    if(!ids.length) return;
+    await supabase.from("transactions").delete().in("id",ids);
+    addToast(`${ids.length} lanÃ§amento(s) removido(s)`);
+    await loadData();
+  }
+
   async function importTxs(rows) {
     const payload = rows.map(tx => ({
       ...tx,
@@ -1818,7 +1854,7 @@ export default function App() {
 
           {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} />}
           {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} currentMonth={currentMonth} onMonthChange={changeMonth} />}
-          {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} />}
+          {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} onDeleteSelected={deleteTxs} />}
           {page==="goals"        && <Goals goals={goals} workspaceId={workspace.id} onRefresh={()=>loadData()} />}
           {page==="reports"      && <Reports txs={txs} members={members} />}
           {page==="investimentos"&& <Investimentos />}
