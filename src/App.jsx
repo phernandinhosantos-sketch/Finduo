@@ -34,10 +34,22 @@ const USER_COLORS = ["#00e5a0","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
 
 // - HELPERS -
 const fmt = n => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n||0);
-const fmtDate = iso => { const d=new Date(iso); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`; };
+const fmtDate = iso => { const d=new Date(`${iso}T12:00`); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`; };
 const getCat  = id => CATEGORIES.find(c=>c.id===id) || CATEGORIES[CATEGORIES.length-1];
 const getCard = id => CREDIT_CARDS_DEFAULT.find(c=>c.id===id);
 const genId   = () => Math.random().toString(36).slice(2,10);
+const localDate = iso => new Date(`${iso}T12:00`);
+const dateToIso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function getCardInvoiceRange(y, m, card) {
+  const end = new Date(y, m, card.closingDay, 12);
+  const start = new Date(y, m - 1, card.closingDay + 1, 12);
+  return { start, end };
+}
+function isInCardInvoice(date, y, m, card) {
+  const d = localDate(date);
+  const { start, end } = getCardInvoiceRange(y, m, card);
+  return d >= start && d <= end;
+}
 
 // - CSS -
 const css = `
@@ -470,8 +482,53 @@ function TxItem({ tx, members, onClick }) {
 function parseMoney(value) {
   const raw = String(value || "").trim().replace(/[^\d,.-]/g, "");
   if (!raw) return 0;
-  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+  const lastComma = raw.lastIndexOf(",");
+  const lastDot = raw.lastIndexOf(".");
+  let normalized = raw;
+  if (lastComma >= 0 && lastDot >= 0) {
+    normalized = lastComma > lastDot
+      ? raw.replace(/\./g, "").replace(",", ".")
+      : raw.replace(/,/g, "");
+  } else if (lastComma >= 0) {
+    normalized = raw.replace(/\./g, "").replace(",", ".");
+  }
   return Math.abs(parseFloat(normalized) || 0);
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function inferCategoryId(categoryValue, description, fallbackId = "other") {
+  const wanted = normalizeText(categoryValue);
+  if (wanted) {
+    const direct = CATEGORIES.find(c =>
+      normalizeText(c.id) === wanted ||
+      normalizeText(c.name) === wanted ||
+      normalizeText(c.name).includes(wanted) ||
+      wanted.includes(normalizeText(c.name))
+    );
+    if (direct) return direct.id;
+  }
+
+  const text = normalizeText(`${categoryValue || ""} ${description || ""}`);
+  const rules = [
+    { id:"food", words:["restaurante","lanchonete","ifood","delivery","padaria","cafe","bar","pizza","lanche","alimentacao"] },
+    { id:"market", words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar"] },
+    { id:"transport", words:["uber","99","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte"] },
+    { id:"health", words:["farmacia","drogaria","hospital","clinica","medico","exame","saude"] },
+    { id:"leisure", words:["cinema","netflix","spotify","show","ingresso","hotel","viagem","lazer"] },
+    { id:"clothes", words:["roupa","calcados","sapato","renner","riachuelo","cea","zara"] },
+    { id:"home", words:["casa","condominio","energia","agua","internet","telefone","aluguel","material de construcao"] },
+    { id:"edu", words:["curso","faculdade","escola","livro","educacao"] },
+    { id:"pet", words:["pet","veterinario","racao"] },
+  ];
+  return rules.find(rule => rule.words.some(word => text.includes(word)))?.id || fallbackId;
 }
 
 function parseInvoiceDate(value) {
@@ -500,15 +557,18 @@ function parseInvoiceText(text, cardId, catId) {
   const dateIdx = hasHeader ? idx(["data","date"]) : 0;
   const descIdx = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","merchant"]) : 1;
   const amountIdx = hasHeader ? idx(["valor","amount","total"]) : 2;
+  const categoryIdx = hasHeader ? idx(["categoria","category","tipo"]) : -1;
   return lines.slice(hasHeader ? 1 : 0).map(line => {
     const cols = splitInvoiceLine(line);
     const amount = parseMoney(cols[amountIdx >= 0 ? amountIdx : cols.length - 1]);
     if (!amount) return null;
+    const description = cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada";
+    const sheetCategory = categoryIdx >= 0 ? cols[categoryIdx] : "";
     return {
       type: "expense",
       amount,
-      description: cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada",
-      category_id: catId,
+      description,
+      category_id: inferCategoryId(sheetCategory, description, catId),
       payment_method: "credit",
       credit_card_id: cardId,
       date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
@@ -612,6 +672,7 @@ function InvoiceImportModal({ onClose, onImport }) {
   const [catId, setCatId] = useState("other");
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
+  const [fileText, setFileText] = useState("");
   const [saving, setSaving] = useState(false);
   const cats = CATEGORIES.filter(c => c.type === "expense" || c.type === "both");
   const total = rows.reduce((s,t)=>s+Number(t.amount),0);
@@ -621,17 +682,18 @@ function InvoiceImportModal({ onClose, onImport }) {
     if (!file) return;
     setFileName(file.name);
     const text = await file.text();
+    setFileText(text);
     setRows(parseInvoiceText(text, cardId, catId));
   }
 
   function updateCard(id) {
     setCardId(id);
-    setRows(r => r.map(t => ({ ...t, credit_card_id: id })));
+    setRows(fileText ? parseInvoiceText(fileText, id, catId) : rows.map(t => ({ ...t, credit_card_id: id })));
   }
 
   function updateCat(id) {
     setCatId(id);
-    setRows(r => r.map(t => ({ ...t, category_id: id })));
+    setRows(fileText ? parseInvoiceText(fileText, cardId, id) : rows.map(t => ({ ...t, category_id: id })));
   }
 
   async function importRows() {
@@ -668,7 +730,7 @@ function InvoiceImportModal({ onClose, onImport }) {
           <input className="fi" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
         </div>
         <div style={{ fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
-          Use colunas como data, descricao e valor. Separadores aceitos: ponto e virgula, tab ou virgula.
+          Use colunas como data, descricao, valor e categoria. Valores podem usar virgula ou ponto nas casas decimais.
         </div>
         {rows.length > 0 && (
           <div className="card" style={{ padding:12,marginBottom:16 }}>
@@ -733,7 +795,7 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
   const maxBar = Math.max(...barData.map(b=>Math.max(b.inc,b.exp)),1);
 
   const cardUsage = CREDIT_CARDS_DEFAULT.map(c => ({
-    ...c, used: mTxs.filter(t=>t.credit_card_id===c.id).reduce((s,t)=>s+Number(t.amount),0)
+    ...c, used: txs.filter(t=>t.credit_card_id===c.id && isInCardInvoice(t.date,y,m,c)).reduce((s,t)=>s+Number(t.amount),0)
   }));
 
   const recent = [...mTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
@@ -862,7 +924,6 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
   const [sel, setSel] = useState(null);
   const [y, m] = currentMonth;
 
-  const mTxs = txs.filter(t=>{ const d=new Date(t.date+"T12:00"); return d.getFullYear()===y&&d.getMonth()===m; });
   const inc  = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
   const exp  = mTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
 
@@ -965,11 +1026,12 @@ function Cards({ txs, members, currentMonth, onImport }) {
   return (
     <div className="page">
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:6 }}>Cartões de Crédito</h1>
-      <p style={{ color:"var(--text2)",fontSize:13,marginBottom:24 }}>{MONTH_NAMES[m]} {y}</p>
+      <p style={{ color:"var(--text2)",fontSize:13,marginBottom:24 }}>Faturas com vencimento em {MONTH_NAMES[m]} {y}</p>
       <button className="btn btn-p" style={{ marginBottom:20 }} onClick={()=>setShowImport(true)}>Importar fatura</button>
       <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
         {CREDIT_CARDS_DEFAULT.map(card=>{
-          const cTxs=mTxs.filter(t=>t.credit_card_id===card.id);
+          const cycle = getCardInvoiceRange(y, m, card);
+          const cTxs=txs.filter(t=>t.credit_card_id===card.id && isInCardInvoice(t.date,y,m,card));
           const used=cTxs.reduce((s,t)=>s+Number(t.amount),0);
           const pct=Math.min((used/card.limit)*100,100);
           return (
@@ -1667,8 +1729,7 @@ export default function App() {
 
   const cardAlerts = (() => {
     const [y,m]=currentMonth;
-    const mTxs=txs.filter(t=>{const d=new Date(t.date+"T12:00");return d.getFullYear()===y&&d.getMonth()===m;});
-    return CREDIT_CARDS_DEFAULT.filter(c=>{ const u=mTxs.filter(t=>t.credit_card_id===c.id).reduce((s,t)=>s+Number(t.amount),0); return u/c.limit>0.8; }).length;
+    return CREDIT_CARDS_DEFAULT.filter(c=>{ const u=txs.filter(t=>t.credit_card_id===c.id && isInCardInvoice(t.date,y,m,c)).reduce((s,t)=>s+Number(t.amount),0); return u/c.limit>0.8; }).length;
   })();
 
   // - render -
