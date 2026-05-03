@@ -467,6 +467,55 @@ function TxItem({ tx, members, onClick }) {
   );
 }
 
+function parseMoney(value) {
+  const raw = String(value || "").trim().replace(/[^\d,.-]/g, "");
+  if (!raw) return 0;
+  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+  return Math.abs(parseFloat(normalized) || 0);
+}
+
+function parseInvoiceDate(value) {
+  const raw = String(value || "").trim();
+  const br = raw.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  if (br) {
+    const y = br[3].length === 2 ? `20${br[3]}` : br[3];
+    return `${y}-${br[2].padStart(2, "0")}-${br[1].padStart(2, "0")}`;
+  }
+  const iso = raw.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
+  return new Date().toISOString().slice(0,10);
+}
+
+function splitInvoiceLine(line) {
+  const delimiter = line.includes(";") ? ";" : line.includes("\t") ? "\t" : ",";
+  return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
+}
+
+function parseInvoiceText(text, cardId, catId) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const first = splitInvoiceLine(lines[0]).map(v => v.toLowerCase());
+  const hasHeader = first.some(v => ["data","date","descricao","descrição","historico","histórico","valor","amount"].includes(v));
+  const idx = name => first.findIndex(v => name.some(n => v.includes(n)));
+  const dateIdx = hasHeader ? idx(["data","date"]) : 0;
+  const descIdx = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","merchant"]) : 1;
+  const amountIdx = hasHeader ? idx(["valor","amount","total"]) : 2;
+  return lines.slice(hasHeader ? 1 : 0).map(line => {
+    const cols = splitInvoiceLine(line);
+    const amount = parseMoney(cols[amountIdx >= 0 ? amountIdx : cols.length - 1]);
+    if (!amount) return null;
+    return {
+      type: "expense",
+      amount,
+      description: cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada",
+      category_id: catId,
+      payment_method: "credit",
+      credit_card_id: cardId,
+      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
+    };
+  }).filter(Boolean);
+}
+
 // - NEW TX MODAL -
 function NewTxModal({ onClose, onSave }) {
   const [type, setType]   = useState("expense");
@@ -552,6 +601,97 @@ function NewTxModal({ onClose, onSave }) {
 
         <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={handleSave} disabled={saving||!amount||!catId}>
           {saving ? <div className="spinner" /> : "💾 Salvar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceImportModal({ onClose, onImport }) {
+  const [cardId, setCardId] = useState(CREDIT_CARDS_DEFAULT[0]?.id || "");
+  const [catId, setCatId] = useState("other");
+  const [rows, setRows] = useState([]);
+  const [fileName, setFileName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const cats = CATEGORIES.filter(c => c.type === "expense" || c.type === "both");
+  const total = rows.reduce((s,t)=>s+Number(t.amount),0);
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const text = await file.text();
+    setRows(parseInvoiceText(text, cardId, catId));
+  }
+
+  function updateCard(id) {
+    setCardId(id);
+    setRows(r => r.map(t => ({ ...t, credit_card_id: id })));
+  }
+
+  function updateCat(id) {
+    setCatId(id);
+    setRows(r => r.map(t => ({ ...t, category_id: id })));
+  }
+
+  async function importRows() {
+    if (!rows.length) return;
+    setSaving(true);
+    await onImport(rows);
+    setSaving(false);
+    onClose();
+  }
+
+  return (
+    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{ maxWidth:720 }}>
+        <div className="modal-hd">
+          <div className="modal-title">Importar fatura</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="g2" style={{ gap:12,marginBottom:16 }}>
+          <div>
+            <label className="fl">Cartão</label>
+            <select className="fsel" value={cardId} onChange={e=>updateCard(e.target.value)}>
+              {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="fl">Categoria padrão</label>
+            <select className="fsel" value={catId} onChange={e=>updateCat(e.target.value)}>
+              {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="fg">
+          <label className="fl">Arquivo CSV ou TXT</label>
+          <input className="fi" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
+        </div>
+        <div style={{ fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
+          Use colunas como data, descricao e valor. Separadores aceitos: ponto e virgula, tab ou virgula.
+        </div>
+        {rows.length > 0 && (
+          <div className="card" style={{ padding:12,marginBottom:16 }}>
+            <div className="sec-hd">
+              <div className="sec-title">{rows.length} gastos encontrados</div>
+              <span className="badge blue">{fmt(total)}</span>
+            </div>
+            <div className="tx-list" style={{ maxHeight:260,overflow:"auto" }}>
+              {rows.slice(0,20).map((tx,i)=>(
+                <div key={`${tx.date}-${i}`} className="tx-item">
+                  <div className="tx-info">
+                    <div className="tx-desc">{tx.description}</div>
+                    <div className="tx-meta">{fmtDate(tx.date)} · {getCat(tx.category_id).name}</div>
+                  </div>
+                  <div className="tx-amt expense">−{fmt(tx.amount)}</div>
+                </div>
+              ))}
+            </div>
+            {rows.length > 20 && <div style={{ fontSize:12,color:"var(--text2)",marginTop:8 }}>Mostrando 20 primeiras linhas de {fileName}.</div>}
+          </div>
+        )}
+        <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
+          {saving ? <div className="spinner" /> : `Importar ${rows.length || ""} gastos`}
         </button>
       </div>
     </div>
@@ -818,13 +958,15 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
 }
 
 // - CARTÕES -
-function Cards({ txs, members, currentMonth }) {
+function Cards({ txs, members, currentMonth, onImport }) {
+  const [showImport, setShowImport] = useState(false);
   const [y, m] = currentMonth;
   const mTxs = txs.filter(t=>{ const d=new Date(t.date+"T12:00"); return d.getFullYear()===y&&d.getMonth()===m; });
   return (
     <div className="page">
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:6 }}>Cartões de Crédito</h1>
       <p style={{ color:"var(--text2)",fontSize:13,marginBottom:24 }}>{MONTH_NAMES[m]} {y}</p>
+      <button className="btn btn-p" style={{ marginBottom:20 }} onClick={()=>setShowImport(true)}>Importar fatura</button>
       <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
         {CREDIT_CARDS_DEFAULT.map(card=>{
           const cTxs=mTxs.filter(t=>t.credit_card_id===card.id);
@@ -860,6 +1002,7 @@ function Cards({ txs, members, currentMonth }) {
           );
         })}
       </div>
+      {showImport && <InvoiceImportModal onClose={()=>setShowImport(false)} onImport={onImport} />}
     </div>
   );
 }
@@ -889,6 +1032,12 @@ function Goals({ goals, workspaceId, onRefresh }) {
     await supabase.from("goals").update({ current:newVal }).eq("id",g.id);
     await onRefresh();
     setAportGoal(null);
+  }
+
+  async function deleteGoal(g) {
+    if(!window.confirm(`Excluir a meta "${g.name}"?`)) return;
+    await supabase.from("goals").delete().eq("id",g.id);
+    await onRefresh();
   }
 
   return (
@@ -924,10 +1073,13 @@ function Goals({ goals, workspaceId, onRefresh }) {
               <div className="prog-bar" style={{ height:8,marginBottom:12 }}>
                 <div className="prog-fill" style={{ width:`${pct}%`,background:done?"var(--green)":pct>60?"var(--blue)":"var(--purple)" }} />
               </div>
-              {!done&&<div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:8 }}>
                 <span style={{ fontSize:12,color:"var(--text2)" }}>Faltam {fmt(g.target-g.current)}</span>
-                <button className="btn btn-g btn-sm" onClick={()=>{ setAportGoal(g); setAportAmt(""); }}>+ Aportar</button>
-              </div>}
+                <div style={{ display:"flex",gap:8 }}>
+                  {!done&&<button className="btn btn-g btn-sm" onClick={()=>{ setAportGoal(g); setAportAmt(""); }}>+ Aportar</button>}
+                  <button className="btn btn-d btn-sm" onClick={()=>deleteGoal(g)}>Excluir</button>
+                </div>
+              </div>
             </div>
           );
         })}
@@ -1475,6 +1627,18 @@ export default function App() {
     addToast("Transação removida");
   }
 
+  async function importTxs(rows) {
+    const payload = rows.map(tx => ({
+      ...tx,
+      workspace_id: workspace.id,
+      user_id: session.user.id,
+    }));
+    const { error } = await supabase.from("transactions").insert(payload);
+    if(error) { addToast("Erro ao importar fatura","error"); return; }
+    addToast(`${rows.length} gastos importados`);
+    await loadData();
+  }
+
   function changeMonth(dir) {
     setCurrentMonth(([y,m])=>{
       let nm=m+dir, ny=y;
@@ -1593,7 +1757,7 @@ export default function App() {
 
           {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} />}
           {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} currentMonth={currentMonth} onMonthChange={changeMonth} />}
-          {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} />}
+          {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} />}
           {page==="goals"        && <Goals goals={goals} workspaceId={workspace.id} onRefresh={()=>loadData()} />}
           {page==="reports"      && <Reports txs={txs} members={members} />}
           {page==="investimentos"&& <Investimentos />}
