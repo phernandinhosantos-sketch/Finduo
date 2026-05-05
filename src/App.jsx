@@ -936,7 +936,6 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(null);
-  const [checked, setChecked] = useState([]);
   const [y, m] = currentMonth;
 
   const inc  = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
@@ -983,27 +982,7 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
         {filtered.length===0 ? (
           <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transação</div></div>
         ) : (
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
-  <input type="checkbox"
-    onChange={e=>setChecked(e.target.checked?filtered.map(t=>t.id):[])}
-  />
-  <span style={{fontSize:12,color:"var(--text2)"}}>Selecionar todos</span>
-  {checked&&checked.length>0&&(
-    <button className="btn btn-d btn-sm" style={{marginLeft:"auto"}}
-      onClick={()=>onDeleteMany&&onDeleteMany(checked).then(()=>setChecked([]))}>
-      Excluir ({checked.length})
-    </button>
-  )}
-</div>
-<div className="tx-list">{filtered.map(tx=>(
-  <div key={tx.id} style={{display:"flex",alignItems:"center",gap:8}}>
-    <input type="checkbox"
-      checked={checked&&checked.includes(tx.id)}
-      onChange={e=>setChecked(ids=>e.target.checked?[...(ids||[]),tx.id]:(ids||[]).filter(x=>x!==tx.id))}
-    />
-    <div style={{flex:1}}><TxItem tx={tx} members={members} onClick={setSel} /></div>
-  </div>
-))}</div>
+          <div className="tx-list">{filtered.map(tx=><TxItem key={tx.id} tx={tx} members={members} onClick={setSel} />)}</div>
         )}
       </div>
 
