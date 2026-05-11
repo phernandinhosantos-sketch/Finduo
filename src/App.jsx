@@ -994,32 +994,34 @@ function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMo
             placeholder="🔍 Buscar..." value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         {filtered.length===0 ? (
-          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transação</div></div>
+          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transacao</div></div>
         ) : (
-          <div style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 0 10px",borderBottom:"1px solid var(--border)",marginBottom:4 }}>
-            <input type="checkbox"
-              checked={checked.length===filtered.length && filtered.length>0}
-              onChange={e=>setChecked(e.target.checked?filtered.map(t=>t.id):[])}
-            />
-            <span style={{ fontSize:12,color:"var(--text2)" }}>
-              {checked.length>0 ? `${checked.length} selecionado(s)` : "Selecionar todos"}
-            </span>
-            {checked.length>0 && (
-              <button className="btn btn-d btn-sm" style={{ marginLeft:"auto" }}
-                onClick={async ()=>{ if(window.confirm(`Excluir ${checked.length} lancamento(s)?`)){await onDeleteMany(checked);setChecked([]);} }}>
-                Excluir ({checked.length})
-              </button>
-            )}
-          </div>
-          <div className="tx-list">{filtered.map(tx=>(
-            <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:8 }}>
+          <>
+            <div style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 0 10px",borderBottom:"1px solid var(--border)",marginBottom:4 }}>
               <input type="checkbox"
-                checked={checked.includes(tx.id)}
-                onChange={e=>setChecked(ids=>e.target.checked?[...ids,tx.id]:ids.filter(x=>x!==tx.id))}
+                checked={checked.length===filtered.length && filtered.length>0}
+                onChange={e=>setChecked(e.target.checked?filtered.map(t=>t.id):[])}
               />
-              <div style={{ flex:1 }}><TxItem tx={tx} members={members} onClick={setSel} /></div>
+              <span style={{ fontSize:12,color:"var(--text2)" }}>
+                {checked.length>0 ? `${checked.length} selecionado(s)` : "Selecionar todos"}
+              </span>
+              {checked.length>0 && (
+                <button className="btn btn-d btn-sm" style={{ marginLeft:"auto" }}
+                  onClick={async ()=>{ if(window.confirm(`Excluir ${checked.length} lancamento(s)?`)){await onDeleteMany(checked);setChecked([]);} }}>
+                  Excluir ({checked.length})
+                </button>
+              )}
             </div>
-          ))}</div>
+            <div className="tx-list">{filtered.map(tx=>(
+              <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:8 }}>
+                <input type="checkbox"
+                  checked={checked.includes(tx.id)}
+                  onChange={e=>setChecked(ids=>e.target.checked?[...ids,tx.id]:ids.filter(x=>x!==tx.id))}
+                />
+                <div style={{ flex:1 }}><TxItem tx={tx} members={members} onClick={setSel} /></div>
+              </div>
+            ))}</div>
+          </>
         )}
       </div>
 
