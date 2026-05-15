@@ -56,10 +56,25 @@ function isInMonth(date, y, m) {
   return d.getFullYear() === y && d.getMonth() === m;
 }
 function isInDashboardPeriod(tx, y, m) {
+  // CREDIT: show in CLOSING DATE month (not purchase date)
   if (tx.payment_method === "credit" && tx.credit_card_id) {
     const card = getCard(tx.credit_card_id);
-    return card ? isInCardInvoice(tx.date, y, m, card) : isInMonth(tx.date, y, m);
+    if (!card) return isInMonth(tx.date, y, m);
+    // Get the closing date for this transaction
+    const txDate = localDate(tx.date);
+    let closingY = txDate.getFullYear();
+    let closingM = txDate.getMonth();
+    // Find next closing date that's after transaction
+    let closingDate = new Date(closingY, closingM, card.closingDay);
+    if (closingDate <= txDate) {
+      closingM++;
+      if (closingM > 11) { closingM = 0; closingY++; }
+      closingDate = new Date(closingY, closingM, card.closingDay);
+    }
+    // Check if this closing date matches requested month
+    return closingDate.getFullYear() === y && closingDate.getMonth() === m;
   }
+  // DEBIT/INCOME: show in transaction month
   return isInMonth(tx.date, y, m);
 }
 
@@ -530,17 +545,15 @@ function inferCategoryId(categoryValue, description, fallbackId = "other") {
 
   const text = normalizeText(`${categoryValue || ""} ${description || ""}`);
   const rules = [
-    { id:"food", words:["restaurante","lanchonete","ifood","keeta","delivery","padaria","cafe","bar","pizza","lanche","alimentacao","arcos dourados","mcdonalds","subway","burger","starbucks","bobs","frango","churrascaria","sushi","porcao","choperia","colonial","rosti","divina"] },
-    { id:"market", words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar","bistek","prezunic","sonda","feira","quitanda","sacolao","minuto pao"] },
-    { id:"transport", words:["uber","99 tec","taxi","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte","gringo","autoposto","autopostolake","bp express","pay posto","pay amp","pay eg","pay auto","pay centr","pay guia","lalamove","motoboy"] },
-    { id:"health", words:["farmacia","drogaria","droga","hospital","clinica","medico","exame","saude","metlife","odontolog","dental","ortoped","laborator","raia","pacheco","ultrafarma","nissei"] },
-    { id:"leisure", words:["cinema","netflix","spotify","amazon prime","disney","hbo","show","ingresso","hotel","viagem","lazer","ebanx","steam","playstation","xbox","jogos","game","tiktok","shopee"] },
-    { id:"clothes", words:["roupa","calcados","sapato","renner","riachuelo","cea","zara","hm","forever 21","lojas","besni","moda","vestuario","calcangela","roma presente","marisa"] },
-    { id:"home", words:["casa","condominio","energia","agua","internet","telefone","aluguel","material","eletropaulo","sabesp","claro","vivo","tim","net","enel","copel","cemig","coelba","minha vida","tok stok","leroy","casa bahia","magazine","construcao","pintura"] },
-    { id:"edu", words:["curso","faculdade","escola","livro","educacao","openai","chatgpt","google","udemy","alura","descomplica","cursinho","apostila","colegio","aula","mensalidade"] },
-    { id:"pet", words:["pet","veterinario","racao","aquario","cobaia","newpet","petz","cobasi"] },
-    { id:"salary", words:["salario","pagamento","credito em conta","ted conta salario","folha"] },
-    { id:"freelance", words:["freelance","pix recebido","servico prestado","honorario","comissao"] },
+    { id:"food", words:["restaurante","lanchonete","ifood","delivery","padaria","cafe","bar","pizza","lanche","alimentacao"] },
+    { id:"market", words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar"] },
+    { id:"transport", words:["uber","99","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte"] },
+    { id:"health", words:["farmacia","drogaria","hospital","clinica","medico","exame","saude"] },
+    { id:"leisure", words:["cinema","netflix","spotify","show","ingresso","hotel","viagem","lazer"] },
+    { id:"clothes", words:["roupa","calcados","sapato","renner","riachuelo","cea","zara"] },
+    { id:"home", words:["casa","condominio","energia","agua","internet","telefone","aluguel","material de construcao"] },
+    { id:"edu", words:["curso","faculdade","escola","livro","educacao"] },
+    { id:"pet", words:["pet","veterinario","racao"] },
   ];
   return rules.find(rule => rule.words.some(word => text.includes(word)))?.id || fallbackId;
 }
@@ -578,11 +591,21 @@ function parseInvoiceText(text, cardId, catId) {
     if (!amount) return null;
     const description = cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada";
     const sheetCategory = categoryIdx >= 0 ? cols[categoryIdx] : "";
+    // Priority 1: CSV category (if found)
+    // Priority 2: IA inference from description
+    // Priority 3: User-provided category
+    let finalCatId = catId || "other";
+    if (sheetCategory) {
+      const catMatch = CATEGORIES.find(c => normalizeText(c.name)===normalizeText(sheetCategory) || normalizeText(c.id)===normalizeText(sheetCategory));
+      finalCatId = catMatch ? catMatch.id : inferCategoryId(sheetCategory, description, catId || "other");
+    } else {
+      finalCatId = inferCategoryId("", description, catId || "other");
+    }
     return {
       type: "expense",
       amount,
       description,
-      category_id: inferCategoryId(sheetCategory, description, catId),
+      category_id: finalCatId,
       payment_method: "credit",
       credit_card_id: cardId,
       date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
@@ -749,35 +772,25 @@ function InvoiceImportModal({ onClose, onImport }) {
         {rows.length > 0 && (
           <div className="card" style={{ padding:12,marginBottom:16 }}>
             <div className="sec-hd">
-              <div className="sec-title">{rows.length} lancamentos detectados</div>
-              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                <span className="badge green">{fmt(total)}</span>
-                <button className="btn btn-g btn-sm" onClick={()=>setRows([])}>Limpar</button>
-              </div>
+              <div className="sec-title">{rows.length} gastos encontrados</div>
+              <span className="badge blue">{fmt(total)}</span>
             </div>
-            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:8 }}>
-              Categoria inferida automaticamente por IA. Ajuste se necessario antes de importar.
-            </div>
-            <div style={{ maxHeight:320,overflow:"auto" }}>
-              {rows.map((tx,i)=>(
-                <div key={i} style={{ display:"grid",gridTemplateColumns:"90px 1fr 120px 90px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
-                  <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
-                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
-                  <select
-                    value={tx.category_id}
-                    onChange={e=>setRows(rs=>rs.map((r,j)=>j===i?{...r,category_id:e.target.value}:r))}
-                    style={{ background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:6,padding:"3px 6px",color:"var(--text)",fontSize:11,cursor:"pointer" }}
-                  >
-                    {CATEGORIES.filter(c=>c.type!=="income").map(c=><option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-                  </select>
-                  <span style={{ textAlign:"right",color:"var(--red)",fontFamily:"monospace" }}>-{fmt(tx.amount)}</span>
+            <div className="tx-list" style={{ maxHeight:260,overflow:"auto" }}>
+              {rows.slice(0,20).map((tx,i)=>(
+                <div key={`${tx.date}-${i}`} className="tx-item">
+                  <div className="tx-info">
+                    <div className="tx-desc">{tx.description}</div>
+                    <div className="tx-meta">{fmtDate(tx.date)} · {getCat(tx.category_id).name}</div>
+                  </div>
+                  <div className="tx-amt expense">−{fmt(tx.amount)}</div>
                 </div>
               ))}
             </div>
+            {rows.length > 20 && <div style={{ fontSize:12,color:"var(--text2)",marginTop:8 }}>Mostrando 20 primeiras linhas de {fileName}.</div>}
           </div>
         )}
         <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
-          {saving ? <div className="spinner" /> : rows.length ? `Importar ${rows.length} lancamentos (${fmt(total)})` : "Selecione um arquivo CSV"}
+          {saving ? <div className="spinner" /> : `Importar ${rows.length || ""} gastos`}
         </button>
       </div>
     </div>
@@ -944,13 +957,11 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
 }
 
 // - TRANSACTIONS -
-function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMonthChange }) {
+function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(null);
-  const [checked, setChecked] = useState([]);
   const [y, m] = currentMonth;
-  const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
 
   const inc  = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
   const exp  = mTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
@@ -994,34 +1005,9 @@ function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMo
             placeholder="🔍 Buscar..." value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         {filtered.length===0 ? (
-          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transacao</div></div>
+          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transação</div></div>
         ) : (
-          <>
-            <div style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 0 10px",borderBottom:"1px solid var(--border)",marginBottom:4 }}>
-              <input type="checkbox"
-                checked={checked.length===filtered.length && filtered.length>0}
-                onChange={e=>setChecked(e.target.checked?filtered.map(t=>t.id):[])}
-              />
-              <span style={{ fontSize:12,color:"var(--text2)" }}>
-                {checked.length>0 ? `${checked.length} selecionado(s)` : "Selecionar todos"}
-              </span>
-              {checked.length>0 && (
-                <button className="btn btn-d btn-sm" style={{ marginLeft:"auto" }}
-                  onClick={async ()=>{ if(window.confirm(`Excluir ${checked.length} lancamento(s)?`)){await onDeleteMany(checked);setChecked([]);} }}>
-                  Excluir ({checked.length})
-                </button>
-              )}
-            </div>
-            <div className="tx-list">{filtered.map(tx=>(
-              <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:8 }}>
-                <input type="checkbox"
-                  checked={checked.includes(tx.id)}
-                  onChange={e=>setChecked(ids=>e.target.checked?[...ids,tx.id]:ids.filter(x=>x!==tx.id))}
-                />
-                <div style={{ flex:1 }}><TxItem tx={tx} members={members} onClick={setSel} /></div>
-              </div>
-            ))}</div>
-          </>
+          <div className="tx-list">{filtered.map(tx=><TxItem key={tx.id} tx={tx} members={members} onClick={setSel} />)}</div>
         )}
       </div>
 
@@ -1115,10 +1101,10 @@ function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
                 </div>
               </div>
               <div className="sec-hd">
-                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <div className="sec-title">Lancamentos do ciclo</div>
                   {cTxs.length>0 && (
-                    <label style={{ display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--text2)",cursor:"pointer" }}>
+                    <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--text2)",cursor:"pointer"}}>
                       <input type="checkbox"
                         checked={cTxs.length>0 && cTxs.every(t=>selected.includes(t.id))}
                         onChange={e=>{
@@ -1130,13 +1116,10 @@ function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
                     </label>
                   )}
                 </div>
-                <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                  <span className="badge blue">{cTxs.length} itens</span>
-                  <span className="badge green">{fmt(used)}</span>
-                </div>
+                <span className="badge blue">{cTxs.length}</span>
               </div>
               {cTxs.length===0 ? (
-                <div className="empty" style={{ padding:24 }}><div className="empty-icon">💳</div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem lancamentos neste ciclo</div></div>
+                <div className="empty" style={{ padding:24 }}><div className="empty-icon">💳</div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem gastos</div></div>
               ) : (
                 <div className="tx-list">{[...cTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>(
                   <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:10 }}>
@@ -1690,191 +1673,6 @@ function Investimentos() {
 }
 
 // - MAIN APP -
-
-// - DICAS IA -
-function Dicas({ txs, goals }) {
-  const [loading, setLoading] = useState(false);
-  const [analise, setAnalise] = useState(null);
-  const [erro, setErro] = useState("");
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-
-  const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
-  const inc = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
-  const exp = mTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
-  const savR = inc>0 ? Math.round((inc-exp)/inc*100) : 0;
-
-  const byCat = {};
-  mTxs.filter(t=>t.type==="expense").forEach(t=>{
-    byCat[t.category_id]=(byCat[t.category_id]||0)+Number(t.amount);
-  });
-  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-
-  const cardUsage = CREDIT_CARDS_DEFAULT.map(c=>({
-    name:c.name, limit:c.limit,
-    used:txs.filter(t=>t.credit_card_id===c.id&&isInCardInvoice(t.date,y,m,c)).reduce((s,t)=>s+Number(t.amount),0)
-  }));
-
-  function buildContext() {
-    const prevTxs = txs.filter(t=>isInDashboardPeriod(t,m===0?y-1:y,m===0?11:m-1));
-    const prevExp = prevTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
-    const catLines = topCat.map(([id,v])=>`${getCat(id).name}: R$${v.toFixed(2)}`).join(", ");
-    const cardLines = cardUsage.map(c=>`${c.name}: R$${c.used.toFixed(2)} de R$${c.limit.toFixed(2)} (${Math.round(c.used/c.limit*100)}%)`).join(" | ");
-    const goalLines = goals.map(g=>`${g.name}: ${Math.round(g.current/g.target*100)}% concluida`).join("; ");
-    return `Dados financeiros reais - ${MONTH_NAMES[m]}/${y}:
-RECEITAS: R$${inc.toFixed(2)} | DESPESAS: R$${exp.toFixed(2)} | SALDO: R$${(inc-exp).toFixed(2)} | POUPANCA: ${savR}%
-MES ANTERIOR - DESPESAS: R$${prevExp.toFixed(2)}
-CATEGORIAS: ${catLines||"Sem dados"}
-CARTOES: ${cardLines}
-METAS: ${goalLines||"Nenhuma"}
-CONTEXTO: Casal tem divida de cheque especial R$12.000 (juros ~8%/mes), financiamento casa R$1.850/mes, objetivo sair das dividas e acumular capital.`;
-  }
-
-  async function gerar() {
-    if(txs.length===0){ setErro("Lance transacoes primeiro para gerar a analise."); return; }
-    setLoading(true); setErro(""); setAnalise(null);
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1200,
-          messages:[{role:"user",content:`Voce e um consultor financeiro especializado em financas de casal no Brasil.
-
-${buildContext()}
-
-Gere uma analise financeira personalizada e direta com:
-
-1. DIAGNOSTICO (2-3 linhas sobre a situacao real)
-2. ALERTAS URGENTES (top 3, com valores especificos dos dados)
-3. ACOES PARA ESTE MES (5 acoes praticas com valores reais)
-4. META DO PROXIMO MES (1 objetivo claro e mensuravel)
-5. FRASE MOTIVACIONAL (curta e relacionada a situacao)
-
-Use os numeros reais dos dados. Seja direto e humano. Responda em portugues.`}]
-        })
-      });
-      const data = await res.json();
-      const text = data.content?.map(b=>b.text||"").join("") || "";
-      if(!text) throw new Error("vazio");
-      setAnalise(text);
-    } catch(e) {
-      setErro("Nao foi possivel gerar. Tente novamente.");
-    } finally { setLoading(false); }
-  }
-
-  return (
-    <div className="page">
-      <div style={{marginBottom:20}}>
-        <h1 style={{fontFamily:"var(--font-d)",fontSize:24,fontWeight:800}}>Dicas IA</h1>
-        <p style={{color:"var(--text2)",fontSize:13,marginTop:2}}>Analise personalizada - {MONTH_NAMES[m]}/{y}</p>
-      </div>
-
-      <div className="g4 fade-up" style={{marginBottom:20}}>
-        <div className={`stat-card ${inc-exp>=0?"green":"red"}`}>
-          <div className="stat-lbl">Saldo do mes</div>
-          <div className={`stat-val ${inc-exp>=0?"green":"red"}`}>{fmt(inc-exp)}</div>
-        </div>
-        <div className="stat-card blue">
-          <div className="stat-lbl">Poupanca</div>
-          <div className={`stat-val ${savR>=10?"green":"red"}`}>{savR}%</div>
-          <div className="stat-sub">Meta: minimo 10%</div>
-        </div>
-        <div className="stat-card red">
-          <div className="stat-lbl">Cheque especial</div>
-          <div className="stat-val red">R$ 12.000</div>
-          <div className="stat-sub">~R$ 960/mes em juros</div>
-        </div>
-        <div className="stat-card yellow">
-          <div className="stat-lbl">Maior gasto</div>
-          <div className="stat-val yellow" style={{fontSize:16}}>{topCat[0]?getCat(topCat[0][0]).name:"--"}</div>
-          <div className="stat-sub">{topCat[0]?fmt(topCat[0][1]):""}</div>
-        </div>
-      </div>
-
-      <div className="card fade-up s1" style={{marginBottom:16,textAlign:"center",padding:28}}>
-        {!analise && !loading && (
-          <>
-            <div style={{fontSize:40,marginBottom:10}}>🧠</div>
-            <div style={{fontFamily:"var(--font-d)",fontSize:17,fontWeight:700,marginBottom:6}}>
-              Analise Financeira Personalizada
-            </div>
-            <div style={{color:"var(--text2)",fontSize:13,marginBottom:20}}>
-              IA analisa seus dados reais e gera recomendacoes especificas para voces.
-            </div>
-            {erro && <div className="alert danger" style={{marginBottom:14,textAlign:"left"}}>{erro}</div>}
-            <button className="btn btn-p btn-lg" onClick={gerar}>
-              Gerar analise agora
-            </button>
-          </>
-        )}
-        {loading && (
-          <div style={{padding:"16px 0"}}>
-            <div className="spinner" style={{margin:"0 auto 12px",width:28,height:28,borderWidth:3}}/>
-            <div style={{color:"var(--text2)",fontSize:13}}>Analisando seus dados...</div>
-          </div>
-        )}
-        {analise && (
-          <div style={{textAlign:"left"}}>
-            <div className="sec-hd">
-              <div className="sec-title">Sua Analise Personalizada</div>
-              <button className="btn btn-g btn-sm" onClick={gerar} disabled={loading}>Atualizar</button>
-            </div>
-            <div style={{whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.8,color:"var(--text)"}}>{analise}</div>
-          </div>
-        )}
-      </div>
-
-      {topCat.length>0 && (
-        <div className="card fade-up s2" style={{marginBottom:16}}>
-          <div className="sec-title" style={{marginBottom:14}}>Gastos por Categoria - {MONTH_NAMES[m]}</div>
-          {topCat.map(([id,val])=>{
-            const cat=getCat(id);
-            const pct=exp>0?(val/exp)*100:0;
-            const alto=pct>25;
-            return (
-              <div key={id} style={{marginBottom:12}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                  <span style={{fontSize:13}}>{cat.emoji} {cat.name}</span>
-                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    {alto && <span className="badge red">Alto</span>}
-                    <span style={{fontFamily:"monospace",fontSize:12,color:"var(--red)"}}>{fmt(val)}</span>
-                    <span style={{fontSize:11,color:"var(--text2)"}}>{Math.round(pct)}%</span>
-                  </div>
-                </div>
-                <div className="prog-bar">
-                  <div className="prog-fill" style={{width:`${Math.min(pct*2,100)}%`,background:alto?"var(--red)":cat.color}}/>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="card fade-up s3">
-        <div className="sec-title" style={{marginBottom:14}}>Regras de Ouro para Voces</div>
-        {[
-          {icon:"🚨",t:"Prioridade #1: Cheque especial",d:"R$ 960/mes em juros e dinheiro jogado fora. Todo real extra deve ir para quitar essa divida primeiro.",c:"var(--red)"},
-          {icon:"💳",t:"Cartoes: ferramenta, nao muleta",d:"Fatura acima de 30% da renda vira armadilha. Use credito para compras planejadas, nunca para fechar o mes.",c:"var(--yellow)"},
-          {icon:"🎯",t:"Regra 50-30-20",d:"50% necessidades, 30% desejos, 20% dividas e poupanca. Adapte progressivamente conforme as dividas diminuem.",c:"var(--blue)"},
-          {icon:"📅",t:"Revisao semanal rapida",d:"5 minutos toda semana olhando os lancamentos evita surpresas no fim do mes e mantem o controle.",c:"var(--green)"},
-          {icon:"🏦",t:"Reserva de emergencia",d:"Apos quitar o cheque especial, guardem 3 meses de gastos no Tesouro Selic antes de qualquer investimento.",c:"var(--purple)"},
-        ].map((d,i)=>(
-          <div key={i} style={{display:"flex",gap:12,padding:"12px 0",borderBottom:i<4?"1px solid var(--border)":"none"}}>
-            <span style={{fontSize:22,flexShrink:0}}>{d.icon}</span>
-            <div>
-              <div style={{fontWeight:600,fontSize:13,color:d.c,marginBottom:3}}>{d.t}</div>
-              <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{d.d}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const [session, setSession]     = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -1967,31 +1765,14 @@ export default function App() {
   }
 
   async function importTxs(rows) {
-    if(!rows.length) return;
-    const cardId = rows[0].credit_card_id;
-    const card = CREDIT_CARDS_DEFAULT.find(c=>c.id===cardId);
-    if(card && cardId) {
-      // Detect month from first transaction
-      const firstDate = new Date(rows[0].date + "T12:00");
-      const fy = firstDate.getFullYear();
-      const fm = firstDate.getMonth();
-      // Delete existing for this card+cycle
-      const existing = txs.filter(t =>
-        t.credit_card_id === cardId && isInCardInvoice(t.date, fy, fm, card)
-      );
-      if(existing.length > 0) {
-        await supabase.from("transactions").delete().in("id", existing.map(t=>t.id));
-        addToast(`${existing.length} lancamentos anteriores substituidos`);
-      }
-    }
     const payload = rows.map(tx => ({
       ...tx,
       workspace_id: workspace.id,
       user_id: session.user.id,
     }));
     const { error } = await supabase.from("transactions").insert(payload);
-    if(error) { addToast("Erro ao importar","error"); return; }
-    addToast(`${rows.length} lancamentos importados com sucesso!`);
+    if(error) { addToast("Erro ao importar fatura","error"); return; }
+    addToast(`${rows.length} gastos importados`);
     await loadData();
   }
 
@@ -2017,10 +1798,9 @@ export default function App() {
     { id:"goals",        icon:"🎯", label:"Metas" },
     { id:"reports",      icon:"📈", label:"Relatórios" },
     { id:"investimentos",icon:"💰", label:"Investimentos" },
-    { id:"dicas",        icon:"🧠", label:"Dicas IA" },
     { id:"settings",     icon:"⚙️",  label:"Configurações" },
   ];
-  const pageLabels = { dashboard:"Dashboard",transactions:"Transações",cards:"Cartões",goals:"Metas",reports:"Relatórios",investimentos:"Investimentos",dicas:"Dicas IA",settings:"Configurações" };
+  const pageLabels = { dashboard:"Dashboard",transactions:"Transações",cards:"Cartões",goals:"Metas",reports:"Relatórios",investimentos:"Investimentos",settings:"Configurações" };
 
   const cardAlerts = (() => {
     const [y,m]=currentMonth;
@@ -2112,12 +1892,11 @@ export default function App() {
           </div>
 
           {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} />}
-          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} onDeleteMany={deleteTxs} currentMonth={currentMonth} onMonthChange={changeMonth} />}
+          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} currentMonth={currentMonth} onMonthChange={changeMonth} />}
           {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} onDeleteSelected={deleteTxs} />}
           {page==="goals"        && <Goals goals={goals} workspaceId={workspace.id} onRefresh={()=>loadData()} />}
           {page==="reports"      && <Reports txs={txs} members={members} />}
           {page==="investimentos"&& <Investimentos />}
-          {page==="dicas"        && <Dicas txs={txs} goals={goals} />}
           {page==="settings"     && <Settings workspace={workspace} members={members} currentMember={currentMember} onSignOut={signOut} />}
         </main>
       </div>
