@@ -17,7 +17,7 @@ const CATEGORIES = [
   { id: "market",    name: "Mercado",     emoji: "🛒", color: "#55efc4", type: "expense" },
   { id: "edu",       name: "Educação",    emoji: "📚", color: "#fdcb6e", type: "expense" },
   { id: "pet",       name: "Pet",         emoji: "🐾", color: "#e17055", type: "expense" },
-  { id: "salary",    name: "Salário",     emoji: "💰", color: "#00e5a0", type: "income" },
+  { id: "salary",    name: "Salário",     emoji: "💰", color: "#c6ff00", type: "income" },
   { id: "freelance", name: "Freelance",   emoji: "💻", color: "#74b9ff", type: "income" },
   { id: "other",     name: "Outros",      emoji: "📦", color: "#636e72", type: "both" },
 ];
@@ -30,7 +30,7 @@ const CREDIT_CARDS_DEFAULT = [
 
 const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const USER_COLORS = ["#00e5a0","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
+const USER_COLORS = ["#c6ff00","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
 const CONTROL_START = { y: 2026, m: 4 };
 
 // - HELPERS -
@@ -56,43 +56,28 @@ function isInMonth(date, y, m) {
   return d.getFullYear() === y && d.getMonth() === m;
 }
 function isInDashboardPeriod(tx, y, m) {
-  // CREDIT: show in CLOSING DATE month (not purchase date)
   if (tx.payment_method === "credit" && tx.credit_card_id) {
     const card = getCard(tx.credit_card_id);
-    if (!card) return isInMonth(tx.date, y, m);
-    // Get the closing date for this transaction
-    const txDate = localDate(tx.date);
-    let closingY = txDate.getFullYear();
-    let closingM = txDate.getMonth();
-    // Find next closing date that's after transaction
-    let closingDate = new Date(closingY, closingM, card.closingDay);
-    if (closingDate <= txDate) {
-      closingM++;
-      if (closingM > 11) { closingM = 0; closingY++; }
-      closingDate = new Date(closingY, closingM, card.closingDay);
-    }
-    // Check if this closing date matches requested month
-    return closingDate.getFullYear() === y && closingDate.getMonth() === m;
+    return card ? isInCardInvoice(tx.date, y, m, card) : isInMonth(tx.date, y, m);
   }
-  // DEBIT/INCOME: show in transaction month
   return isInMonth(tx.date, y, m);
 }
 
 // - CSS -
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
     --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--surface3:#22223a;
     --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
     --text:#f0f0f8;--text2:#8888aa;
-    --green:#00e5a0;--green-dim:rgba(0,229,160,0.12);
+    --green:#c6ff00;--green-dim:rgba(198,255,0,0.12);
     --red:#ff4d6d;--red-dim:rgba(255,77,109,0.12);
     --blue:#4d9fff;--blue-dim:rgba(77,159,255,0.12);
     --yellow:#ffd166;--yellow-dim:rgba(255,209,102,0.12);
     --purple:#b794f4;
     --radius:16px;--radius-sm:10px;
-    --font-d:'Syne',sans-serif;--font-b:'DM Sans',sans-serif;
+    --font-d:'Bebas Neue',sans-serif;--font-b:'Plus Jakarta Sans',sans-serif;
     --shadow:0 4px 24px rgba(0,0,0,0.4);--shadow-lg:0 8px 48px rgba(0,0,0,0.6);
   }
   body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-height:100vh;overflow-x:hidden}
@@ -102,7 +87,7 @@ const css = `
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes pop{0%{transform:scale(0.92);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes rtPulse{0%{box-shadow:0 0 0 0 rgba(0,229,160,0.4)}70%{box-shadow:0 0 0 6px rgba(0,229,160,0)}100%{box-shadow:0 0 0 0 rgba(0,229,160,0)}}
+  @keyframes rtPulse{0%{box-shadow:0 0 0 0 rgba(198,255,0,0.4)}70%{box-shadow:0 0 0 6px rgba(198,255,0,0)}100%{box-shadow:0 0 0 0 rgba(198,255,0,0)}}
   .fade-up{animation:fadeUp 0.4s ease both}
   .fade-in{animation:fadeIn 0.3s ease both}
   .pop{animation:pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both}
@@ -112,7 +97,7 @@ const css = `
   .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;z-index:100}
   .logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
   .logo-mark{font-family:var(--font-d);font-size:22px;font-weight:800;display:flex;align-items:center;gap:8px}
-  .logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#000;font-weight:900}
+  .logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#000;font-weight:900;font-family:var(--font-d);letter-spacing:-0.5px}
   .logo-text span{color:var(--green)}
   .ws-badge{margin-top:10px;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text2)}
   .ws-avs{display:flex}
@@ -150,8 +135,8 @@ const css = `
   .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
   /* buttons */
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);font-family:var(--font-b);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
-  .btn-p{background:var(--green);color:#000;font-weight:600}
-  .btn-p:hover{background:#00ccaa;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,160,0.3)}
+  .btn-p{background:var(--green);color:#0a0a0f;font-weight:700}
+  .btn-p:hover{background:#aadd00;transform:translateY(-1px);box-shadow:0 4px 20px rgba(198,255,0,0.35)}
   .btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
   .btn-g{background:transparent;color:var(--text2);border:1px solid var(--border2)}
   .btn-g:hover{background:var(--surface2);color:var(--text)}
@@ -159,8 +144,8 @@ const css = `
   .btn-d:hover{background:rgba(255,77,109,.2)}
   .btn-sm{padding:6px 12px;font-size:12px}
   .btn-lg{padding:14px 28px;font-size:15px;font-weight:600}
-  .fab{position:fixed;right:28px;bottom:28px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:24px;font-weight:700;cursor:pointer;border:none;box-shadow:0 4px 24px rgba(0,229,160,0.4);display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:200}
-  .fab:hover{transform:scale(1.08) rotate(45deg);box-shadow:0 6px 32px rgba(0,229,160,0.5)}
+  .fab{position:fixed;right:28px;bottom:28px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:24px;font-weight:700;cursor:pointer;border:none;box-shadow:0 4px 24px rgba(198,255,0,0.4);display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:200}
+  .fab:hover{transform:scale(1.08) rotate(45deg);box-shadow:0 6px 32px rgba(198,255,0,0.5)}
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;animation:fadeIn .2s ease}
   .modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:pop .3s ease both}
@@ -172,12 +157,12 @@ const css = `
   .fg{margin-bottom:16px}
   .fl{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:.5px}
   .fi{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-family:var(--font-b);font-size:14px;transition:border-color .2s;outline:none}
-  .fi:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,229,160,0.1)}
+  .fi:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(198,255,0,0.1)}
   .fi::placeholder{color:var(--text2);opacity:.5}
   .amt-wrap{position:relative;margin-bottom:20px}
   .amt-pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--text2);font-family:var(--font-d);font-weight:600}
   .amt-inp{width:100%;background:var(--surface2);border:2px solid var(--border2);border-radius:var(--radius);padding:16px 14px 16px 40px;color:var(--text);font-family:var(--font-d);font-size:28px;font-weight:700;outline:none;transition:border-color .2s}
-  .amt-inp:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(0,229,160,0.1)}
+  .amt-inp:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(198,255,0,0.1)}
   .type-tog{display:flex;background:var(--surface2);border-radius:var(--radius-sm);padding:4px;margin-bottom:20px;gap:4px}
   .type-btn{flex:1;padding:8px;border-radius:8px;border:none;font-family:var(--font-b);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2);background:transparent}
   .type-btn.ae{background:var(--red);color:#fff}
@@ -219,14 +204,14 @@ const css = `
   .alert.warn{background:var(--yellow-dim);border:1px solid rgba(255,209,102,.2);color:var(--yellow)}
   .alert.danger{background:var(--red-dim);border:1px solid rgba(255,77,109,.2);color:var(--red)}
   .alert.info{background:var(--blue-dim);border:1px solid rgba(77,159,255,.2);color:var(--blue)}
-  .alert.success{background:var(--green-dim);border:1px solid rgba(0,229,160,.2);color:var(--green)}
+  .alert.success{background:var(--green-dim);border:1px solid rgba(198,255,0,.2);color:var(--green)}
   .chip{display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;gap:4px}
   .chip:hover,.chip.active{background:var(--green-dim);border-color:var(--green);color:var(--green)}
   .divider{height:1px;background:var(--border);margin:16px 0}
   .empty{text-align:center;padding:48px 24px;color:var(--text2)}
   .empty-icon{font-size:40px;margin-bottom:12px;opacity:.5}
   .empty-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
-  .rt-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(0,229,160,0.4);animation:rtPulse 2s infinite}
+  .rt-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(198,255,0,0.4);animation:rtPulse 2s infinite}
   .bar-chart{display:flex;align-items:flex-end;gap:10px;height:80px}
   .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
   .bar{width:100%;border-radius:4px 4px 0 0;transition:height .5s cubic-bezier(0.34,1.56,0.64,1);min-height:2px}
@@ -254,7 +239,7 @@ const css = `
   .ob-dot{width:8px;height:8px;border-radius:50%;background:var(--surface3)}
   .ob-dot.active{background:var(--green)}
   /* invite */
-  .inv-code{font-family:var(--font-d);font-size:28px;font-weight:800;letter-spacing:6px;color:var(--green);text-align:center;padding:16px;background:var(--green-dim);border-radius:var(--radius);border:1px solid rgba(0,229,160,.2);margin:16px 0}
+  .inv-code{font-family:var(--font-d);font-size:28px;font-weight:800;letter-spacing:6px;color:var(--green);text-align:center;padding:16px;background:var(--green-dim);border-radius:var(--radius);border:1px solid rgba(198,255,0,.2);margin:16px 0}
   @media(max-width:768px){
     .sidebar{display:none}
     .g4{grid-template-columns:repeat(2,1fr)}
@@ -320,11 +305,11 @@ function AuthScreen({ onAuth }) {
     <div className="auth-wrap">
       <div className="auth-box">
         <div style={{ textAlign:"center", marginBottom:28 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginBottom:8 }}>
-            <div className="logo-icon">F</div>
-            <span style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800 }}>Fin<span style={{ color:"var(--green)" }}>Duo</span></span>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, marginBottom:8 }}>
+            <div className="logo-icon" style={{ width:40, height:40, fontSize:13, letterSpacing:"-1px", borderRadius:10 }}>TMJ</div>
+            <span style={{ fontFamily:"var(--font-d)", fontSize:28, fontWeight:800, letterSpacing:"1px" }}>TAMO <span style={{ color:"var(--green)" }}>JUNTO</span></span>
           </div>
-          <p style={{ color:"var(--text2)", fontSize:13 }}>Controle financeiro para casais</p>
+          <p style={{ color:"var(--text2)", fontSize:13 }}>Controle financeiro para casais 💚</p>
         </div>
 
         <div className="tabs" style={{ marginBottom:24 }}>
@@ -405,7 +390,7 @@ function Onboarding({ user, onDone }) {
 
         {step === 1 && (
           <div className="fade-up">
-            <h2 style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800, marginBottom:8 }}>Bem-vindo ao FinDuo 👋</h2>
+            <h2 style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800, marginBottom:8 }}>Bem-vindo ao Tamo Junto 💚</h2>
             <p style={{ color:"var(--text2)", fontSize:14, marginBottom:28 }}>Você quer criar um novo espaço compartilhado ou entrar no espaço do seu parceiro?</p>
             <div className="g2" style={{ gap:12 }}>
               <button className="btn btn-p" style={{ padding:"20px 12px", flexDirection:"column", gap:8, height:"auto" }} onClick={() => setStep(2)}>
@@ -545,15 +530,17 @@ function inferCategoryId(categoryValue, description, fallbackId = "other") {
 
   const text = normalizeText(`${categoryValue || ""} ${description || ""}`);
   const rules = [
-    { id:"food", words:["restaurante","lanchonete","ifood","delivery","padaria","cafe","bar","pizza","lanche","alimentacao"] },
-    { id:"market", words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar"] },
-    { id:"transport", words:["uber","99","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte"] },
-    { id:"health", words:["farmacia","drogaria","hospital","clinica","medico","exame","saude"] },
-    { id:"leisure", words:["cinema","netflix","spotify","show","ingresso","hotel","viagem","lazer"] },
-    { id:"clothes", words:["roupa","calcados","sapato","renner","riachuelo","cea","zara"] },
-    { id:"home", words:["casa","condominio","energia","agua","internet","telefone","aluguel","material de construcao"] },
-    { id:"edu", words:["curso","faculdade","escola","livro","educacao"] },
-    { id:"pet", words:["pet","veterinario","racao"] },
+    { id:"food", words:["restaurante","lanchonete","ifood","keeta","delivery","padaria","cafe","bar","pizza","lanche","alimentacao","arcos dourados","mcdonalds","subway","burger","starbucks","bobs","frango","churrascaria","sushi","porcao","choperia","colonial","rosti","divina"] },
+    { id:"market", words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar","bistek","prezunic","sonda","feira","quitanda","sacolao","minuto pao"] },
+    { id:"transport", words:["uber","99 tec","taxi","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte","gringo","autoposto","autopostolake","bp express","pay posto","pay amp","pay eg","pay auto","pay centr","pay guia","lalamove","motoboy"] },
+    { id:"health", words:["farmacia","drogaria","droga","hospital","clinica","medico","exame","saude","metlife","odontolog","dental","ortoped","laborator","raia","pacheco","ultrafarma","nissei"] },
+    { id:"leisure", words:["cinema","netflix","spotify","amazon prime","disney","hbo","show","ingresso","hotel","viagem","lazer","ebanx","steam","playstation","xbox","jogos","game","tiktok","shopee"] },
+    { id:"clothes", words:["roupa","calcados","sapato","renner","riachuelo","cea","zara","hm","forever 21","lojas","besni","moda","vestuario","calcangela","roma presente","marisa"] },
+    { id:"home", words:["casa","condominio","energia","agua","internet","telefone","aluguel","material","eletropaulo","sabesp","claro","vivo","tim","net","enel","copel","cemig","coelba","minha vida","tok stok","leroy","casa bahia","magazine","construcao","pintura"] },
+    { id:"edu", words:["curso","faculdade","escola","livro","educacao","openai","chatgpt","google","udemy","alura","descomplica","cursinho","apostila","colegio","aula","mensalidade"] },
+    { id:"pet", words:["pet","veterinario","racao","aquario","cobaia","newpet","petz","cobasi"] },
+    { id:"salary", words:["salario","pagamento","credito em conta","ted conta salario","folha"] },
+    { id:"freelance", words:["freelance","pix recebido","servico prestado","honorario","comissao"] },
   ];
   return rules.find(rule => rule.words.some(word => text.includes(word)))?.id || fallbackId;
 }
@@ -591,21 +578,11 @@ function parseInvoiceText(text, cardId, catId) {
     if (!amount) return null;
     const description = cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada";
     const sheetCategory = categoryIdx >= 0 ? cols[categoryIdx] : "";
-    // Priority 1: CSV category (if found)
-    // Priority 2: IA inference from description
-    // Priority 3: User-provided category
-    let finalCatId = catId || "other";
-    if (sheetCategory) {
-      const catMatch = CATEGORIES.find(c => normalizeText(c.name)===normalizeText(sheetCategory) || normalizeText(c.id)===normalizeText(sheetCategory));
-      finalCatId = catMatch ? catMatch.id : inferCategoryId(sheetCategory, description, catId || "other");
-    } else {
-      finalCatId = inferCategoryId("", description, catId || "other");
-    }
     return {
       type: "expense",
       amount,
       description,
-      category_id: finalCatId,
+      category_id: inferCategoryId(sheetCategory, description, catId),
       payment_method: "credit",
       credit_card_id: cardId,
       date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
@@ -772,25 +749,35 @@ function InvoiceImportModal({ onClose, onImport }) {
         {rows.length > 0 && (
           <div className="card" style={{ padding:12,marginBottom:16 }}>
             <div className="sec-hd">
-              <div className="sec-title">{rows.length} gastos encontrados</div>
-              <span className="badge blue">{fmt(total)}</span>
+              <div className="sec-title">{rows.length} lancamentos detectados</div>
+              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                <span className="badge green">{fmt(total)}</span>
+                <button className="btn btn-g btn-sm" onClick={()=>setRows([])}>Limpar</button>
+              </div>
             </div>
-            <div className="tx-list" style={{ maxHeight:260,overflow:"auto" }}>
-              {rows.slice(0,20).map((tx,i)=>(
-                <div key={`${tx.date}-${i}`} className="tx-item">
-                  <div className="tx-info">
-                    <div className="tx-desc">{tx.description}</div>
-                    <div className="tx-meta">{fmtDate(tx.date)} · {getCat(tx.category_id).name}</div>
-                  </div>
-                  <div className="tx-amt expense">−{fmt(tx.amount)}</div>
+            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:8 }}>
+              Categoria inferida automaticamente por IA. Ajuste se necessario antes de importar.
+            </div>
+            <div style={{ maxHeight:320,overflow:"auto" }}>
+              {rows.map((tx,i)=>(
+                <div key={i} style={{ display:"grid",gridTemplateColumns:"90px 1fr 120px 90px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
+                  <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
+                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
+                  <select
+                    value={tx.category_id}
+                    onChange={e=>setRows(rs=>rs.map((r,j)=>j===i?{...r,category_id:e.target.value}:r))}
+                    style={{ background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:6,padding:"3px 6px",color:"var(--text)",fontSize:11,cursor:"pointer" }}
+                  >
+                    {CATEGORIES.filter(c=>c.type!=="income").map(c=><option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+                  </select>
+                  <span style={{ textAlign:"right",color:"var(--red)",fontFamily:"monospace" }}>-{fmt(tx.amount)}</span>
                 </div>
               ))}
             </div>
-            {rows.length > 20 && <div style={{ fontSize:12,color:"var(--text2)",marginTop:8 }}>Mostrando 20 primeiras linhas de {fileName}.</div>}
           </div>
         )}
         <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
-          {saving ? <div className="spinner" /> : `Importar ${rows.length || ""} gastos`}
+          {saving ? <div className="spinner" /> : rows.length ? `Importar ${rows.length} lancamentos (${fmt(total)})` : "Selecione um arquivo CSV"}
         </button>
       </div>
     </div>
@@ -957,11 +944,13 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
 }
 
 // - TRANSACTIONS -
-function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
+function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMonthChange }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(null);
+  const [checked, setChecked] = useState([]);
   const [y, m] = currentMonth;
+  const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
 
   const inc  = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
   const exp  = mTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
@@ -1005,9 +994,34 @@ function Transactions({ txs, members, onDelete, currentMonth, onMonthChange }) {
             placeholder="🔍 Buscar..." value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         {filtered.length===0 ? (
-          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transação</div></div>
+          <div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">Nenhuma transacao</div></div>
         ) : (
-          <div className="tx-list">{filtered.map(tx=><TxItem key={tx.id} tx={tx} members={members} onClick={setSel} />)}</div>
+          <>
+            <div style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 0 10px",borderBottom:"1px solid var(--border)",marginBottom:4 }}>
+              <input type="checkbox"
+                checked={checked.length===filtered.length && filtered.length>0}
+                onChange={e=>setChecked(e.target.checked?filtered.map(t=>t.id):[])}
+              />
+              <span style={{ fontSize:12,color:"var(--text2)" }}>
+                {checked.length>0 ? `${checked.length} selecionado(s)` : "Selecionar todos"}
+              </span>
+              {checked.length>0 && (
+                <button className="btn btn-d btn-sm" style={{ marginLeft:"auto" }}
+                  onClick={async ()=>{ if(window.confirm(`Excluir ${checked.length} lancamento(s)?`)){await onDeleteMany(checked);setChecked([]);} }}>
+                  Excluir ({checked.length})
+                </button>
+              )}
+            </div>
+            <div className="tx-list">{filtered.map(tx=>(
+              <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:8 }}>
+                <input type="checkbox"
+                  checked={checked.includes(tx.id)}
+                  onChange={e=>setChecked(ids=>e.target.checked?[...ids,tx.id]:ids.filter(x=>x!==tx.id))}
+                />
+                <div style={{ flex:1 }}><TxItem tx={tx} members={members} onClick={setSel} /></div>
+              </div>
+            ))}</div>
+          </>
         )}
       </div>
 
@@ -1101,10 +1115,10 @@ function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
                 </div>
               </div>
               <div className="sec-hd">
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                   <div className="sec-title">Lancamentos do ciclo</div>
                   {cTxs.length>0 && (
-                    <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--text2)",cursor:"pointer"}}>
+                    <label style={{ display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--text2)",cursor:"pointer" }}>
                       <input type="checkbox"
                         checked={cTxs.length>0 && cTxs.every(t=>selected.includes(t.id))}
                         onChange={e=>{
@@ -1116,10 +1130,13 @@ function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
                     </label>
                   )}
                 </div>
-                <span className="badge blue">{cTxs.length}</span>
+                <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+                  <span className="badge blue">{cTxs.length} itens</span>
+                  <span className="badge green">{fmt(used)}</span>
+                </div>
               </div>
               {cTxs.length===0 ? (
-                <div className="empty" style={{ padding:24 }}><div className="empty-icon">💳</div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem gastos</div></div>
+                <div className="empty" style={{ padding:24 }}><div className="empty-icon">💳</div><div style={{ fontSize:13,color:"var(--text2)" }}>Sem lancamentos neste ciclo</div></div>
               ) : (
                 <div className="tx-list">{[...cTxs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>(
                   <div key={tx.id} style={{ display:"flex",alignItems:"center",gap:10 }}>
@@ -1566,7 +1583,7 @@ function Investimentos() {
         <span style={{ fontSize:16,flexShrink:0 }}>🚨</span>
         <div><strong>Seu momento atual:</strong> Com R$ 12.000 no cheque especial a ~8%/mês, quitar essa dívida é o melhor "investimento" agora. Cada mês custa ~R$ 960 em juros — nenhum investimento paga isso.</div>
       </div>
-      <div style={{ display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:10,fontSize:13,marginBottom:20,background:"var(--green-dim)",border:"1px solid rgba(0,229,160,.2)",color:"#6ee7b7" }}>
+      <div style={{ display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:10,fontSize:13,marginBottom:20,background:"var(--green-dim)",border:"1px solid rgba(198,255,0,.2)",color:"#6ee7b7" }}>
         <span style={{ fontSize:16,flexShrink:0 }}>✅</span>
         <div><strong>Quando começar:</strong> Após zerar o cheque especial, monte reserva no Tesouro Selic (R$ 24k a R$ 48k). Depois migre para LCI/LCA e CDB.</div>
       </div>
@@ -1673,6 +1690,191 @@ function Investimentos() {
 }
 
 // - MAIN APP -
+
+// - DICAS IA -
+function Dicas({ txs, goals }) {
+  const [loading, setLoading] = useState(false);
+  const [analise, setAnalise] = useState(null);
+  const [erro, setErro] = useState("");
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+
+  const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
+  const inc = mTxs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
+  const exp = mTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
+  const savR = inc>0 ? Math.round((inc-exp)/inc*100) : 0;
+
+  const byCat = {};
+  mTxs.filter(t=>t.type==="expense").forEach(t=>{
+    byCat[t.category_id]=(byCat[t.category_id]||0)+Number(t.amount);
+  });
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+
+  const cardUsage = CREDIT_CARDS_DEFAULT.map(c=>({
+    name:c.name, limit:c.limit,
+    used:txs.filter(t=>t.credit_card_id===c.id&&isInCardInvoice(t.date,y,m,c)).reduce((s,t)=>s+Number(t.amount),0)
+  }));
+
+  function buildContext() {
+    const prevTxs = txs.filter(t=>isInDashboardPeriod(t,m===0?y-1:y,m===0?11:m-1));
+    const prevExp = prevTxs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
+    const catLines = topCat.map(([id,v])=>`${getCat(id).name}: R$${v.toFixed(2)}`).join(", ");
+    const cardLines = cardUsage.map(c=>`${c.name}: R$${c.used.toFixed(2)} de R$${c.limit.toFixed(2)} (${Math.round(c.used/c.limit*100)}%)`).join(" | ");
+    const goalLines = goals.map(g=>`${g.name}: ${Math.round(g.current/g.target*100)}% concluida`).join("; ");
+    return `Dados financeiros reais - ${MONTH_NAMES[m]}/${y}:
+RECEITAS: R$${inc.toFixed(2)} | DESPESAS: R$${exp.toFixed(2)} | SALDO: R$${(inc-exp).toFixed(2)} | POUPANCA: ${savR}%
+MES ANTERIOR - DESPESAS: R$${prevExp.toFixed(2)}
+CATEGORIAS: ${catLines||"Sem dados"}
+CARTOES: ${cardLines}
+METAS: ${goalLines||"Nenhuma"}
+CONTEXTO: Casal tem divida de cheque especial R$12.000 (juros ~8%/mes), financiamento casa R$1.850/mes, objetivo sair das dividas e acumular capital.`;
+  }
+
+  async function gerar() {
+    if(txs.length===0){ setErro("Lance transacoes primeiro para gerar a analise."); return; }
+    setLoading(true); setErro(""); setAnalise(null);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1200,
+          messages:[{role:"user",content:`Voce e um consultor financeiro especializado em financas de casal no Brasil.
+
+${buildContext()}
+
+Gere uma analise financeira personalizada e direta com:
+
+1. DIAGNOSTICO (2-3 linhas sobre a situacao real)
+2. ALERTAS URGENTES (top 3, com valores especificos dos dados)
+3. ACOES PARA ESTE MES (5 acoes praticas com valores reais)
+4. META DO PROXIMO MES (1 objetivo claro e mensuravel)
+5. FRASE MOTIVACIONAL (curta e relacionada a situacao)
+
+Use os numeros reais dos dados. Seja direto e humano. Responda em portugues.`}]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.map(b=>b.text||"").join("") || "";
+      if(!text) throw new Error("vazio");
+      setAnalise(text);
+    } catch(e) {
+      setErro("Nao foi possivel gerar. Tente novamente.");
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <div className="page">
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontFamily:"var(--font-d)",fontSize:24,fontWeight:800}}>Dicas IA</h1>
+        <p style={{color:"var(--text2)",fontSize:13,marginTop:2}}>Analise personalizada - {MONTH_NAMES[m]}/{y}</p>
+      </div>
+
+      <div className="g4 fade-up" style={{marginBottom:20}}>
+        <div className={`stat-card ${inc-exp>=0?"green":"red"}`}>
+          <div className="stat-lbl">Saldo do mes</div>
+          <div className={`stat-val ${inc-exp>=0?"green":"red"}`}>{fmt(inc-exp)}</div>
+        </div>
+        <div className="stat-card blue">
+          <div className="stat-lbl">Poupanca</div>
+          <div className={`stat-val ${savR>=10?"green":"red"}`}>{savR}%</div>
+          <div className="stat-sub">Meta: minimo 10%</div>
+        </div>
+        <div className="stat-card red">
+          <div className="stat-lbl">Cheque especial</div>
+          <div className="stat-val red">R$ 12.000</div>
+          <div className="stat-sub">~R$ 960/mes em juros</div>
+        </div>
+        <div className="stat-card yellow">
+          <div className="stat-lbl">Maior gasto</div>
+          <div className="stat-val yellow" style={{fontSize:16}}>{topCat[0]?getCat(topCat[0][0]).name:"--"}</div>
+          <div className="stat-sub">{topCat[0]?fmt(topCat[0][1]):""}</div>
+        </div>
+      </div>
+
+      <div className="card fade-up s1" style={{marginBottom:16,textAlign:"center",padding:28}}>
+        {!analise && !loading && (
+          <>
+            <div style={{fontSize:40,marginBottom:10}}>🧠</div>
+            <div style={{fontFamily:"var(--font-d)",fontSize:17,fontWeight:700,marginBottom:6}}>
+              Analise Financeira Personalizada
+            </div>
+            <div style={{color:"var(--text2)",fontSize:13,marginBottom:20}}>
+              IA analisa seus dados reais e gera recomendacoes especificas para voces.
+            </div>
+            {erro && <div className="alert danger" style={{marginBottom:14,textAlign:"left"}}>{erro}</div>}
+            <button className="btn btn-p btn-lg" onClick={gerar}>
+              Gerar analise agora
+            </button>
+          </>
+        )}
+        {loading && (
+          <div style={{padding:"16px 0"}}>
+            <div className="spinner" style={{margin:"0 auto 12px",width:28,height:28,borderWidth:3}}/>
+            <div style={{color:"var(--text2)",fontSize:13}}>Analisando seus dados...</div>
+          </div>
+        )}
+        {analise && (
+          <div style={{textAlign:"left"}}>
+            <div className="sec-hd">
+              <div className="sec-title">Sua Analise Personalizada</div>
+              <button className="btn btn-g btn-sm" onClick={gerar} disabled={loading}>Atualizar</button>
+            </div>
+            <div style={{whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.8,color:"var(--text)"}}>{analise}</div>
+          </div>
+        )}
+      </div>
+
+      {topCat.length>0 && (
+        <div className="card fade-up s2" style={{marginBottom:16}}>
+          <div className="sec-title" style={{marginBottom:14}}>Gastos por Categoria - {MONTH_NAMES[m]}</div>
+          {topCat.map(([id,val])=>{
+            const cat=getCat(id);
+            const pct=exp>0?(val/exp)*100:0;
+            const alto=pct>25;
+            return (
+              <div key={id} style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                  <span style={{fontSize:13}}>{cat.emoji} {cat.name}</span>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    {alto && <span className="badge red">Alto</span>}
+                    <span style={{fontFamily:"monospace",fontSize:12,color:"var(--red)"}}>{fmt(val)}</span>
+                    <span style={{fontSize:11,color:"var(--text2)"}}>{Math.round(pct)}%</span>
+                  </div>
+                </div>
+                <div className="prog-bar">
+                  <div className="prog-fill" style={{width:`${Math.min(pct*2,100)}%`,background:alto?"var(--red)":cat.color}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="card fade-up s3">
+        <div className="sec-title" style={{marginBottom:14}}>Regras de Ouro para Voces</div>
+        {[
+          {icon:"🚨",t:"Prioridade #1: Cheque especial",d:"R$ 960/mes em juros e dinheiro jogado fora. Todo real extra deve ir para quitar essa divida primeiro.",c:"var(--red)"},
+          {icon:"💳",t:"Cartoes: ferramenta, nao muleta",d:"Fatura acima de 30% da renda vira armadilha. Use credito para compras planejadas, nunca para fechar o mes.",c:"var(--yellow)"},
+          {icon:"🎯",t:"Regra 50-30-20",d:"50% necessidades, 30% desejos, 20% dividas e poupanca. Adapte progressivamente conforme as dividas diminuem.",c:"var(--blue)"},
+          {icon:"📅",t:"Revisao semanal rapida",d:"5 minutos toda semana olhando os lancamentos evita surpresas no fim do mes e mantem o controle.",c:"var(--green)"},
+          {icon:"🏦",t:"Reserva de emergencia",d:"Apos quitar o cheque especial, guardem 3 meses de gastos no Tesouro Selic antes de qualquer investimento.",c:"var(--purple)"},
+        ].map((d,i)=>(
+          <div key={i} style={{display:"flex",gap:12,padding:"12px 0",borderBottom:i<4?"1px solid var(--border)":"none"}}>
+            <span style={{fontSize:22,flexShrink:0}}>{d.icon}</span>
+            <div>
+              <div style={{fontWeight:600,fontSize:13,color:d.c,marginBottom:3}}>{d.t}</div>
+              <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{d.d}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [session, setSession]     = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -1765,14 +1967,31 @@ export default function App() {
   }
 
   async function importTxs(rows) {
+    if(!rows.length) return;
+    const cardId = rows[0].credit_card_id;
+    const card = CREDIT_CARDS_DEFAULT.find(c=>c.id===cardId);
+    if(card && cardId) {
+      // Detect month from first transaction
+      const firstDate = new Date(rows[0].date + "T12:00");
+      const fy = firstDate.getFullYear();
+      const fm = firstDate.getMonth();
+      // Delete existing for this card+cycle
+      const existing = txs.filter(t =>
+        t.credit_card_id === cardId && isInCardInvoice(t.date, fy, fm, card)
+      );
+      if(existing.length > 0) {
+        await supabase.from("transactions").delete().in("id", existing.map(t=>t.id));
+        addToast(`${existing.length} lancamentos anteriores substituidos`);
+      }
+    }
     const payload = rows.map(tx => ({
       ...tx,
       workspace_id: workspace.id,
       user_id: session.user.id,
     }));
     const { error } = await supabase.from("transactions").insert(payload);
-    if(error) { addToast("Erro ao importar fatura","error"); return; }
-    addToast(`${rows.length} gastos importados`);
+    if(error) { addToast("Erro ao importar","error"); return; }
+    addToast(`${rows.length} lancamentos importados com sucesso!`);
     await loadData();
   }
 
@@ -1798,9 +2017,10 @@ export default function App() {
     { id:"goals",        icon:"🎯", label:"Metas" },
     { id:"reports",      icon:"📈", label:"Relatórios" },
     { id:"investimentos",icon:"💰", label:"Investimentos" },
+    { id:"dicas",        icon:"🧠", label:"Dicas IA" },
     { id:"settings",     icon:"⚙️",  label:"Configurações" },
   ];
-  const pageLabels = { dashboard:"Dashboard",transactions:"Transações",cards:"Cartões",goals:"Metas",reports:"Relatórios",investimentos:"Investimentos",settings:"Configurações" };
+  const pageLabels = { dashboard:"Dashboard",transactions:"Transações",cards:"Cartões",goals:"Metas",reports:"Relatórios",investimentos:"Investimentos",dicas:"Dicas IA",settings:"Configurações" };
 
   const cardAlerts = (() => {
     const [y,m]=currentMonth;
@@ -1812,7 +2032,7 @@ export default function App() {
     <>
       <style>{css}</style>
       <div className="loading-screen">
-        <div style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800 }}>Fin<span style={{ color:"var(--green)" }}>Duo</span></div>
+        <div style={{ fontFamily:"var(--font-d)",fontSize:32,fontWeight:800,letterSpacing:"2px" }}>TAMO <span style={{ color:"var(--green)" }}>JUNTO</span></div>
         <div className="spinner" />
       </div>
     </>
@@ -1840,8 +2060,8 @@ export default function App() {
         <nav className="sidebar">
           <div className="logo">
             <div className="logo-mark">
-              <div className="logo-icon">F</div>
-              <div className="logo-text">Fin<span>Duo</span></div>
+              <div className="logo-icon" style={{ fontSize:11, letterSpacing:"-0.5px", borderRadius:8 }}>TMJ</div>
+              <div className="logo-text" style={{ fontFamily:"var(--font-d)", fontSize:20, letterSpacing:"0.5px" }}>TAMO <span>JUNTO</span></div>
             </div>
             <div className="ws-badge">
               <div className="ws-avs">
@@ -1892,11 +2112,12 @@ export default function App() {
           </div>
 
           {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} />}
-          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} currentMonth={currentMonth} onMonthChange={changeMonth} />}
+          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} onDeleteMany={deleteTxs} currentMonth={currentMonth} onMonthChange={changeMonth} />}
           {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} onDeleteSelected={deleteTxs} />}
           {page==="goals"        && <Goals goals={goals} workspaceId={workspace.id} onRefresh={()=>loadData()} />}
           {page==="reports"      && <Reports txs={txs} members={members} />}
           {page==="investimentos"&& <Investimentos />}
+          {page==="dicas"        && <Dicas txs={txs} goals={goals} />}
           {page==="settings"     && <Settings workspace={workspace} members={members} currentMember={currentMember} onSignOut={signOut} />}
         </main>
       </div>
