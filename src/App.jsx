@@ -17,7 +17,7 @@ const CATEGORIES = [
   { id: "market",    name: "Mercado",     emoji: "🛒", color: "#55efc4", type: "expense" },
   { id: "edu",       name: "Educação",    emoji: "📚", color: "#fdcb6e", type: "expense" },
   { id: "pet",       name: "Pet",         emoji: "🐾", color: "#e17055", type: "expense" },
-  { id: "salary",    name: "Salário",     emoji: "💰", color: "#c6ff00", type: "income" },
+  { id: "salary",    name: "Salário",     emoji: "💰", color: "#00e5a0", type: "income" },
   { id: "freelance", name: "Freelance",   emoji: "💻", color: "#74b9ff", type: "income" },
   { id: "other",     name: "Outros",      emoji: "📦", color: "#636e72", type: "both" },
 ];
@@ -30,7 +30,7 @@ const CREDIT_CARDS_DEFAULT = [
 
 const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const USER_COLORS = ["#c6ff00","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
+const USER_COLORS = ["#00e5a0","#4d9fff","#f59e0b","#ff6b9d","#a29bfe"];
 const CONTROL_START = { y: 2026, m: 4 };
 
 // - HELPERS -
@@ -65,19 +65,19 @@ function isInDashboardPeriod(tx, y, m) {
 
 // - CSS -
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
     --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--surface3:#22223a;
     --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
     --text:#f0f0f8;--text2:#8888aa;
-    --green:#c6ff00;--green-dim:rgba(198,255,0,0.12);
+    --green:#00e5a0;--green-dim:rgba(0,229,160,0.12);
     --red:#ff4d6d;--red-dim:rgba(255,77,109,0.12);
     --blue:#4d9fff;--blue-dim:rgba(77,159,255,0.12);
     --yellow:#ffd166;--yellow-dim:rgba(255,209,102,0.12);
     --purple:#b794f4;
     --radius:16px;--radius-sm:10px;
-    --font-d:'Bebas Neue',sans-serif;--font-b:'Plus Jakarta Sans',sans-serif;
+    --font-d:'Syne',sans-serif;--font-b:'DM Sans',sans-serif;
     --shadow:0 4px 24px rgba(0,0,0,0.4);--shadow-lg:0 8px 48px rgba(0,0,0,0.6);
   }
   body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-height:100vh;overflow-x:hidden}
@@ -87,7 +87,7 @@ const css = `
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes pop{0%{transform:scale(0.92);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes rtPulse{0%{box-shadow:0 0 0 0 rgba(198,255,0,0.4)}70%{box-shadow:0 0 0 6px rgba(198,255,0,0)}100%{box-shadow:0 0 0 0 rgba(198,255,0,0)}}
+  @keyframes rtPulse{0%{box-shadow:0 0 0 0 rgba(0,229,160,0.4)}70%{box-shadow:0 0 0 6px rgba(0,229,160,0)}100%{box-shadow:0 0 0 0 rgba(0,229,160,0)}}
   .fade-up{animation:fadeUp 0.4s ease both}
   .fade-in{animation:fadeIn 0.3s ease both}
   .pop{animation:pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both}
@@ -97,7 +97,7 @@ const css = `
   .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;z-index:100}
   .logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
   .logo-mark{font-family:var(--font-d);font-size:22px;font-weight:800;display:flex;align-items:center;gap:8px}
-  .logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#000;font-weight:900;font-family:var(--font-d);letter-spacing:-0.5px}
+  .logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#000;font-weight:900}
   .logo-text span{color:var(--green)}
   .ws-badge{margin-top:10px;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text2)}
   .ws-avs{display:flex}
@@ -135,8 +135,8 @@ const css = `
   .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
   /* buttons */
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);font-family:var(--font-b);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
-  .btn-p{background:var(--green);color:#0a0a0f;font-weight:700}
-  .btn-p:hover{background:#aadd00;transform:translateY(-1px);box-shadow:0 4px 20px rgba(198,255,0,0.35)}
+  .btn-p{background:var(--green);color:#000;font-weight:600}
+  .btn-p:hover{background:#00ccaa;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,160,0.3)}
   .btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
   .btn-g{background:transparent;color:var(--text2);border:1px solid var(--border2)}
   .btn-g:hover{background:var(--surface2);color:var(--text)}
@@ -144,8 +144,8 @@ const css = `
   .btn-d:hover{background:rgba(255,77,109,.2)}
   .btn-sm{padding:6px 12px;font-size:12px}
   .btn-lg{padding:14px 28px;font-size:15px;font-weight:600}
-  .fab{position:fixed;right:28px;bottom:28px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:24px;font-weight:700;cursor:pointer;border:none;box-shadow:0 4px 24px rgba(198,255,0,0.4);display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:200}
-  .fab:hover{transform:scale(1.08) rotate(45deg);box-shadow:0 6px 32px rgba(198,255,0,0.5)}
+  .fab{position:fixed;right:28px;bottom:28px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:24px;font-weight:700;cursor:pointer;border:none;box-shadow:0 4px 24px rgba(0,229,160,0.4);display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:200}
+  .fab:hover{transform:scale(1.08) rotate(45deg);box-shadow:0 6px 32px rgba(0,229,160,0.5)}
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;animation:fadeIn .2s ease}
   .modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:pop .3s ease both}
@@ -157,12 +157,12 @@ const css = `
   .fg{margin-bottom:16px}
   .fl{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:.5px}
   .fi{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-family:var(--font-b);font-size:14px;transition:border-color .2s;outline:none}
-  .fi:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(198,255,0,0.1)}
+  .fi:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,229,160,0.1)}
   .fi::placeholder{color:var(--text2);opacity:.5}
   .amt-wrap{position:relative;margin-bottom:20px}
   .amt-pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--text2);font-family:var(--font-d);font-weight:600}
   .amt-inp{width:100%;background:var(--surface2);border:2px solid var(--border2);border-radius:var(--radius);padding:16px 14px 16px 40px;color:var(--text);font-family:var(--font-d);font-size:28px;font-weight:700;outline:none;transition:border-color .2s}
-  .amt-inp:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(198,255,0,0.1)}
+  .amt-inp:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(0,229,160,0.1)}
   .type-tog{display:flex;background:var(--surface2);border-radius:var(--radius-sm);padding:4px;margin-bottom:20px;gap:4px}
   .type-btn{flex:1;padding:8px;border-radius:8px;border:none;font-family:var(--font-b);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text2);background:transparent}
   .type-btn.ae{background:var(--red);color:#fff}
@@ -204,14 +204,14 @@ const css = `
   .alert.warn{background:var(--yellow-dim);border:1px solid rgba(255,209,102,.2);color:var(--yellow)}
   .alert.danger{background:var(--red-dim);border:1px solid rgba(255,77,109,.2);color:var(--red)}
   .alert.info{background:var(--blue-dim);border:1px solid rgba(77,159,255,.2);color:var(--blue)}
-  .alert.success{background:var(--green-dim);border:1px solid rgba(198,255,0,.2);color:var(--green)}
+  .alert.success{background:var(--green-dim);border:1px solid rgba(0,229,160,.2);color:var(--green)}
   .chip{display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;gap:4px}
   .chip:hover,.chip.active{background:var(--green-dim);border-color:var(--green);color:var(--green)}
   .divider{height:1px;background:var(--border);margin:16px 0}
   .empty{text-align:center;padding:48px 24px;color:var(--text2)}
   .empty-icon{font-size:40px;margin-bottom:12px;opacity:.5}
   .empty-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
-  .rt-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(198,255,0,0.4);animation:rtPulse 2s infinite}
+  .rt-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(0,229,160,0.4);animation:rtPulse 2s infinite}
   .bar-chart{display:flex;align-items:flex-end;gap:10px;height:80px}
   .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
   .bar{width:100%;border-radius:4px 4px 0 0;transition:height .5s cubic-bezier(0.34,1.56,0.64,1);min-height:2px}
@@ -239,7 +239,7 @@ const css = `
   .ob-dot{width:8px;height:8px;border-radius:50%;background:var(--surface3)}
   .ob-dot.active{background:var(--green)}
   /* invite */
-  .inv-code{font-family:var(--font-d);font-size:28px;font-weight:800;letter-spacing:6px;color:var(--green);text-align:center;padding:16px;background:var(--green-dim);border-radius:var(--radius);border:1px solid rgba(198,255,0,.2);margin:16px 0}
+  .inv-code{font-family:var(--font-d);font-size:28px;font-weight:800;letter-spacing:6px;color:var(--green);text-align:center;padding:16px;background:var(--green-dim);border-radius:var(--radius);border:1px solid rgba(0,229,160,.2);margin:16px 0}
   @media(max-width:768px){
     .sidebar{display:none}
     .g4{grid-template-columns:repeat(2,1fr)}
@@ -305,11 +305,11 @@ function AuthScreen({ onAuth }) {
     <div className="auth-wrap">
       <div className="auth-box">
         <div style={{ textAlign:"center", marginBottom:28 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, marginBottom:8 }}>
-            <div className="logo-icon" style={{ width:40, height:40, fontSize:13, letterSpacing:"-1px", borderRadius:10 }}>TMJ</div>
-            <span style={{ fontFamily:"var(--font-d)", fontSize:28, fontWeight:800, letterSpacing:"1px" }}>TAMO <span style={{ color:"var(--green)" }}>JUNTO</span></span>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginBottom:8 }}>
+            <div className="logo-icon">F</div>
+            <span style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800 }}>Fin<span style={{ color:"var(--green)" }}>Duo</span></span>
           </div>
-          <p style={{ color:"var(--text2)", fontSize:13 }}>Controle financeiro para casais 💚</p>
+          <p style={{ color:"var(--text2)", fontSize:13 }}>Controle financeiro para casais</p>
         </div>
 
         <div className="tabs" style={{ marginBottom:24 }}>
@@ -390,7 +390,7 @@ function Onboarding({ user, onDone }) {
 
         {step === 1 && (
           <div className="fade-up">
-            <h2 style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800, marginBottom:8 }}>Bem-vindo ao Tamo Junto 💚</h2>
+            <h2 style={{ fontFamily:"var(--font-d)", fontSize:24, fontWeight:800, marginBottom:8 }}>Bem-vindo ao FinDuo 👋</h2>
             <p style={{ color:"var(--text2)", fontSize:14, marginBottom:28 }}>Você quer criar um novo espaço compartilhado ou entrar no espaço do seu parceiro?</p>
             <div className="g2" style={{ gap:12 }}>
               <button className="btn btn-p" style={{ padding:"20px 12px", flexDirection:"column", gap:8, height:"auto" }} onClick={() => setStep(2)}>
@@ -562,6 +562,40 @@ function splitInvoiceLine(line) {
   return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
 }
 
+function parseInstallments(description, date, amount, cardId, catId) {
+  // Detecta padrões: "2/6", "02/06", "PARC 2/6", "PARCELA 2 DE 6"
+  const m =
+    description.match(/\b(\d{1,2})\s*[\/]\s*(\d{1,2})\b/) ||
+    description.match(/parcela\s+(\d+)\s+de\s+(\d+)/i) ||
+    description.match(/parc\.?\s*(\d+)\s*\/\s*(\d+)/i);
+  if (!m) return null;
+  const current = parseInt(m[1]);
+  const total   = parseInt(m[2]);
+  if (!total || total < 2 || current > total) return null;
+
+  // Gera lançamentos para as parcelas restantes (current até total)
+  const baseDesc = description.replace(m[0], "").replace(/\s{2,}/g, " ").trim();
+  const [y, mo, d] = date.split("-").map(Number);
+  const rows = [];
+  for (let i = current; i <= total; i++) {
+    const moOffset = mo - 1 + (i - current);
+    const yr = y + Math.floor(moOffset / 12);
+    const mn = (moOffset % 12) + 1;
+    const dayMax = new Date(yr, mn, 0).getDate();
+    const dy = Math.min(d, dayMax);
+    rows.push({
+      type: "expense",
+      amount,
+      description: `${baseDesc} (${i}/${total})`,
+      category_id: inferCategoryId("", baseDesc, catId),
+      payment_method: "credit",
+      credit_card_id: cardId,
+      date: `${yr}-${String(mn).padStart(2,"0")}-${String(dy).padStart(2,"0")}`,
+    });
+  }
+  return rows;
+}
+
 function parseInvoiceText(text, cardId, catId) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return [];
@@ -572,21 +606,27 @@ function parseInvoiceText(text, cardId, catId) {
   const descIdx = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","merchant"]) : 1;
   const amountIdx = hasHeader ? idx(["valor","amount","total"]) : 2;
   const categoryIdx = hasHeader ? idx(["categoria","category","tipo"]) : -1;
-  return lines.slice(hasHeader ? 1 : 0).map(line => {
+  return lines.slice(hasHeader ? 1 : 0).flatMap(line => {
     const cols = splitInvoiceLine(line);
     const amount = parseMoney(cols[amountIdx >= 0 ? amountIdx : cols.length - 1]);
-    if (!amount) return null;
+    if (!amount) return [];
     const description = cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada";
     const sheetCategory = categoryIdx >= 0 ? cols[categoryIdx] : "";
-    return {
+    const date = parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]);
+
+    // Tenta expandir parcelas
+    const installments = parseInstallments(description, date, amount, cardId, inferCategoryId(sheetCategory, description, catId));
+    if (installments) return installments;
+
+    return [{
       type: "expense",
       amount,
       description,
       category_id: inferCategoryId(sheetCategory, description, catId),
       payment_method: "credit",
       credit_card_id: cardId,
-      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
-    };
+      date,
+    }];
   }).filter(Boolean);
 }
 
@@ -725,19 +765,11 @@ function InvoiceImportModal({ onClose, onImport }) {
           <div className="modal-title">Importar fatura</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <div className="g2" style={{ gap:12,marginBottom:16 }}>
-          <div>
-            <label className="fl">Cartão</label>
-            <select className="fsel" value={cardId} onChange={e=>updateCard(e.target.value)}>
-              {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="fl">Categoria padrão</label>
-            <select className="fsel" value={catId} onChange={e=>updateCat(e.target.value)}>
-              {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+        <div style={{ marginBottom:16 }}>
+          <label className="fl">Cartão</label>
+          <select className="fsel" value={cardId} onChange={e=>updateCard(e.target.value)}>
+            {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </div>
         <div className="fg">
           <label className="fl">Arquivo CSV ou TXT</label>
@@ -784,7 +816,128 @@ function InvoiceImportModal({ onClose, onImport }) {
   );
 }
 
-// - STAT CARD -
+// - IMPORTAR EXTRATO BANCÁRIO -
+function BankStatementModal({ onClose, onImport }) {
+  const [rows, setRows]       = useState([]);
+  const [fileText, setFileText] = useState("");
+  const [saving, setSaving]   = useState(false);
+  const total = rows.reduce((s,t) => s + (t.type==="expense" ? -t.amount : t.amount), 0);
+
+  function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      setFileText(text);
+      setRows(parseBankStatement(text));
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  async function importRows() {
+    if (!rows.length) return;
+    setSaving(true);
+    await onImport(rows);
+    setSaving(false);
+    onClose();
+  }
+
+  return (
+    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{ maxWidth:720 }}>
+        <div className="modal-hd">
+          <div className="modal-title">Importar extrato bancário</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="fg" style={{ marginBottom:8 }}>
+          <label className="fl">Arquivo CSV ou TXT do banco</label>
+          <input className="fi" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
+        </div>
+        <div style={{ fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
+          Compatível com extratos do Itaú, Bradesco, Nubank, Inter, Santander e outros. Colunas: data, descrição, valor (negativo = débito, positivo = crédito).
+        </div>
+        {rows.length > 0 && (
+          <div className="card" style={{ padding:12,marginBottom:16 }}>
+            <div className="sec-hd">
+              <div className="sec-title">{rows.length} lançamentos detectados</div>
+              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                <span className={`badge ${total>=0?"green":"red"}`}>{total>=0?"+":""}{fmt(Math.abs(total))}</span>
+                <button className="btn btn-g btn-sm" onClick={()=>setRows([])}>Limpar</button>
+              </div>
+            </div>
+            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:8 }}>
+              Débitos como despesa, créditos como receita. Categoria inferida automaticamente.
+            </div>
+            <div style={{ maxHeight:320,overflow:"auto" }}>
+              {rows.map((tx,i)=>(
+                <div key={i} style={{ display:"grid",gridTemplateColumns:"90px 1fr 90px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
+                  <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
+                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
+                  <span style={{ textAlign:"right",color:tx.type==="income"?"var(--green)":"var(--red)",fontFamily:"monospace" }}>
+                    {tx.type==="income"?"+":"-"}{fmt(tx.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
+          {saving ? <div className="spinner" /> : rows.length ? `Importar ${rows.length} lançamentos` : "Selecione um arquivo CSV"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// - PARSE EXTRATO BANCÁRIO -
+function parseBankStatement(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const first = splitInvoiceLine(lines[0]).map(v => v.toLowerCase());
+  const hasHeader = first.some(v => ["data","date","descricao","descrição","historico","valor","amount","lancamento"].includes(v));
+  const idx = names => first.findIndex(v => names.some(n => v.includes(n)));
+  const dateIdx   = hasHeader ? idx(["data","date","lancamento"]) : 0;
+  const descIdx   = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","memo"]) : 1;
+  const amountIdx = hasHeader ? idx(["valor","amount","total","credito","debito"]) : 2;
+  const creditIdx = hasHeader ? idx(["credito","credit","entrada"]) : -1;
+  const debitIdx  = hasHeader ? idx(["debito","debit","saida","saída"]) : -1;
+
+  return lines.slice(hasHeader ? 1 : 0).flatMap(line => {
+    const cols = splitInvoiceLine(line);
+    const description = cols[descIdx >= 0 ? descIdx : 1] || "Extrato importado";
+
+    // Suporte a colunas separadas de débito/crédito (ex: Bradesco, Itaú)
+    let amount = 0;
+    let type = "expense";
+    if (creditIdx >= 0 && debitIdx >= 0) {
+      const credit = parseMoney(cols[creditIdx]);
+      const debit  = parseMoney(cols[debitIdx]);
+      if (credit > 0)      { amount = credit; type = "income";  }
+      else if (debit > 0)  { amount = debit;  type = "expense"; }
+      else return [];
+    } else {
+      const raw = String(cols[amountIdx >= 0 ? amountIdx : cols.length - 1] || "").trim();
+      const val = parseMoney(raw);
+      if (!val) return [];
+      // Valor negativo = débito (despesa)
+      type   = raw.startsWith("-") ? "expense" : "income";
+      amount = val;
+    }
+
+    return [{
+      type,
+      amount,
+      description,
+      category_id: inferCategoryId("", description, type === "income" ? "salary" : "other"),
+      payment_method: "debit",
+      credit_card_id: null,
+      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
+    }];
+  }).filter(Boolean);
+}
+
+
 function SC({ label, value, color, icon, sub }) {
   return (
     <div className={`stat-card ${color}`}>
@@ -944,11 +1097,12 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
 }
 
 // - TRANSACTIONS -
-function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMonthChange }) {
+function Transactions({ txs, members, onDelete, onDeleteMany, onImport, currentMonth, onMonthChange }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(null);
   const [checked, setChecked] = useState([]);
+  const [showExtrato, setShowExtrato] = useState(false);
   const [y, m] = currentMonth;
   const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
 
@@ -981,6 +1135,9 @@ function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMo
         <SC label="Receitas" value={fmt(inc)} color="green" icon="↑" />
         <SC label="Despesas" value={fmt(exp)} color="red" icon="↓" />
         <SC label="Saldo" value={fmt(inc-exp)} color={inc-exp>=0?"green":"red"} icon="💰" />
+      </div>
+      <div style={{ display:"flex",gap:8,marginBottom:16 }}>
+        <button className="btn btn-g" onClick={()=>setShowExtrato(true)}>Importar extrato bancário</button>
       </div>
 
       <div className="card fade-up s1">
@@ -1067,11 +1224,10 @@ function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMo
           </div>
         </div>
       )}
+      {showExtrato && <BankStatementModal onClose={()=>setShowExtrato(false)} onImport={onImport} />}
     </div>
   );
 }
-
-// - CARTÕES -
 function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
   const [showImport, setShowImport] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -1583,7 +1739,7 @@ function Investimentos() {
         <span style={{ fontSize:16,flexShrink:0 }}>🚨</span>
         <div><strong>Seu momento atual:</strong> Com R$ 12.000 no cheque especial a ~8%/mês, quitar essa dívida é o melhor "investimento" agora. Cada mês custa ~R$ 960 em juros — nenhum investimento paga isso.</div>
       </div>
-      <div style={{ display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:10,fontSize:13,marginBottom:20,background:"var(--green-dim)",border:"1px solid rgba(198,255,0,.2)",color:"#6ee7b7" }}>
+      <div style={{ display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",borderRadius:10,fontSize:13,marginBottom:20,background:"var(--green-dim)",border:"1px solid rgba(0,229,160,.2)",color:"#6ee7b7" }}>
         <span style={{ fontSize:16,flexShrink:0 }}>✅</span>
         <div><strong>Quando começar:</strong> Após zerar o cheque especial, monte reserva no Tesouro Selic (R$ 24k a R$ 48k). Depois migre para LCI/LCA e CDB.</div>
       </div>
@@ -2032,7 +2188,7 @@ export default function App() {
     <>
       <style>{css}</style>
       <div className="loading-screen">
-        <div style={{ fontFamily:"var(--font-d)",fontSize:32,fontWeight:800,letterSpacing:"2px" }}>TAMO <span style={{ color:"var(--green)" }}>JUNTO</span></div>
+        <div style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800 }}>Fin<span style={{ color:"var(--green)" }}>Duo</span></div>
         <div className="spinner" />
       </div>
     </>
@@ -2060,8 +2216,8 @@ export default function App() {
         <nav className="sidebar">
           <div className="logo">
             <div className="logo-mark">
-              <div className="logo-icon" style={{ fontSize:11, letterSpacing:"-0.5px", borderRadius:8 }}>TMJ</div>
-              <div className="logo-text" style={{ fontFamily:"var(--font-d)", fontSize:20, letterSpacing:"0.5px" }}>TAMO <span>JUNTO</span></div>
+              <div className="logo-icon">F</div>
+              <div className="logo-text">Fin<span>Duo</span></div>
             </div>
             <div className="ws-badge">
               <div className="ws-avs">
@@ -2112,7 +2268,7 @@ export default function App() {
           </div>
 
           {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} />}
-          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} onDeleteMany={deleteTxs} currentMonth={currentMonth} onMonthChange={changeMonth} />}
+          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} onDeleteMany={deleteTxs} onImport={importTxs} currentMonth={currentMonth} onMonthChange={changeMonth} />}
           {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} onDeleteSelected={deleteTxs} />}
           {page==="goals"        && <Goals goals={goals} workspaceId={workspace.id} onRefresh={()=>loadData()} />}
           {page==="reports"      && <Reports txs={txs} members={members} />}
