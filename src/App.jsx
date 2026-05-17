@@ -17,6 +17,7 @@ const CATEGORIES = [
   { id: "market",    name: "Mercado",     emoji: "🛒", color: "#55efc4", type: "expense" },
   { id: "edu",       name: "Educação",    emoji: "📚", color: "#fdcb6e", type: "expense" },
   { id: "pet",       name: "Pet",         emoji: "🐾", color: "#e17055", type: "expense" },
+  { id: "interest",  name: "Juros",       emoji: "📈", color: "#ff4757", type: "expense" },
   { id: "salary",    name: "Salário",     emoji: "💰", color: "#00e5a0", type: "income" },
   { id: "freelance", name: "Freelance",   emoji: "💻", color: "#74b9ff", type: "income" },
   { id: "other",     name: "Outros",      emoji: "📦", color: "#636e72", type: "both" },
@@ -517,7 +518,21 @@ function normalizeText(value) {
 }
 
 function inferCategoryId(categoryValue, description, fallbackId = "other") {
-  const wanted = normalizeText(categoryValue);
+  // Mapeamento direto dos tipos do CSV do Itaú
+  const itauTypeMap = {
+    "carro":      "transport",
+    "saude":      "health",
+    "delivery":   "food",
+    "almoco":     "food",
+    "compra":     "other",
+    "assinatura": "leisure",
+    "juros":      "interest",
+    "roupas":     "clothes",
+  };
+  const typeKey = normalizeText(categoryValue);
+  if (typeKey && itauTypeMap[typeKey]) return itauTypeMap[typeKey];
+
+  const wanted = typeKey;
   if (wanted) {
     const direct = CATEGORIES.find(c =>
       normalizeText(c.id) === wanted ||
@@ -530,16 +545,17 @@ function inferCategoryId(categoryValue, description, fallbackId = "other") {
 
   const text = normalizeText(`${categoryValue || ""} ${description || ""}`);
   const rules = [
-    { id:"food", words:["restaurante","lanchonete","ifood","keeta","delivery","padaria","cafe","bar","pizza","lanche","alimentacao","arcos dourados","mcdonalds","subway","burger","starbucks","bobs","frango","churrascaria","sushi","porcao","choperia","colonial","rosti","divina"] },
-    { id:"market", words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar","bistek","prezunic","sonda","feira","quitanda","sacolao","minuto pao"] },
-    { id:"transport", words:["uber","99 tec","taxi","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte","gringo","autoposto","autopostolake","bp express","pay posto","pay amp","pay eg","pay auto","pay centr","pay guia","lalamove","motoboy"] },
-    { id:"health", words:["farmacia","drogaria","droga","hospital","clinica","medico","exame","saude","metlife","odontolog","dental","ortoped","laborator","raia","pacheco","ultrafarma","nissei"] },
-    { id:"leisure", words:["cinema","netflix","spotify","amazon prime","disney","hbo","show","ingresso","hotel","viagem","lazer","ebanx","steam","playstation","xbox","jogos","game","tiktok","shopee"] },
-    { id:"clothes", words:["roupa","calcados","sapato","renner","riachuelo","cea","zara","hm","forever 21","lojas","besni","moda","vestuario","calcangela","roma presente","marisa"] },
-    { id:"home", words:["casa","condominio","energia","agua","internet","telefone","aluguel","material","eletropaulo","sabesp","claro","vivo","tim","net","enel","copel","cemig","coelba","minha vida","tok stok","leroy","casa bahia","magazine","construcao","pintura"] },
-    { id:"edu", words:["curso","faculdade","escola","livro","educacao","openai","chatgpt","google","udemy","alura","descomplica","cursinho","apostila","colegio","aula","mensalidade"] },
-    { id:"pet", words:["pet","veterinario","racao","aquario","cobaia","newpet","petz","cobasi"] },
-    { id:"salary", words:["salario","pagamento","credito em conta","ted conta salario","folha"] },
+    { id:"interest",  words:["juros","multa","encargo","iof","mora","financiamento","cheque especial","tarifa","anuidade","cet","taxa"] },
+    { id:"food",      words:["restaurante","lanchonete","ifood","keeta","delivery","padaria","cafe","bar","pizza","lanche","alimentacao","almoco","arcos dourados","mcdonalds","subway","burger","starbucks","bobs","frango","churrascaria","sushi","porcao","choperia","colonial","rosti","divina"] },
+    { id:"market",    words:["mercado","supermercado","hortifruti","atacadao","assai","carrefour","extra","pao de acucar","bistek","prezunic","sonda","feira","quitanda","sacolao","minuto pao"] },
+    { id:"transport", words:["uber","99 tec","taxi","posto","combustivel","gasolina","estacionamento","pedagio","metro","onibus","transporte","gringo","autoposto","bp express","lalamove","motoboy","tag","vistoria"] },
+    { id:"health",    words:["farmacia","drogaria","droga","hospital","clinica","medico","exame","saude","metlife","odontolog","dental","ortoped","laborator","raia","pacheco","ultrafarma","nissei"] },
+    { id:"leisure",   words:["cinema","netflix","spotify","amazon","disney","hbo","show","ingresso","hotel","viagem","lazer","ebanx","steam","playstation","xbox","jogos","game","tiktok","shopee","assinatura","dramawave","chatgpt","google one","microsoft","melimais","envato","ifood club","cartao de todos"] },
+    { id:"clothes",   words:["roupa","calcados","sapato","renner","riachuelo","cea","zara","hm","forever 21","lojas","besni","moda","vestuario","calcangela","roma presente","marisa"] },
+    { id:"home",      words:["casa","condominio","energia","agua","internet","telefone","aluguel","material","eletropaulo","sabesp","claro","vivo","tim","net","enel","copel","cemig","coelba","tok stok","leroy","casa bahia","magazine","construcao","pintura"] },
+    { id:"edu",       words:["curso","faculdade","escola","livro","educacao","openai","chatgpt","google","udemy","alura","descomplica","cursinho","apostila","colegio","aula","mensalidade"] },
+    { id:"pet",       words:["pet","veterinario","racao","aquario","cobaia","newpet","petz","cobasi"] },
+    { id:"salary",    words:["salario","pagamento","credito em conta","ted conta salario","folha"] },
     { id:"freelance", words:["freelance","pix recebido","servico prestado","honorario","comissao"] },
   ];
   return rules.find(rule => rule.words.some(word => text.includes(word)))?.id || fallbackId;
@@ -562,91 +578,32 @@ function splitInvoiceLine(line) {
   return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
 }
 
-// Padrões de linhas que devem ser IGNORADAS na fatura
-// (resumos, pagamentos, créditos, cabeçalhos secundários do Itaú/Santander)
-const INVOICE_SKIP_PATTERNS = [
-  /pagamento\s+recebido/i,
-  /pagamento\s+efetuado/i,
-  /pagamento\s+de\s+fatura/i,
-  /credito\s+de\s+fatura/i,
-  /saldo\s+anterior/i,
-  /saldo\s+atual/i,
-  /limite\s+de\s+cr/i,
-  /limite\s+dispon/i,
-  /total\s+da\s+fatura/i,
-  /total\s+nacional/i,
-  /total\s+internacional/i,
-  /encargos/i,
-  /juros\s+de\s+mora/i,
-  /multa\s+por\s+atraso/i,
-  /descricao/i,          // segunda linha de cabeçalho
-  /^data[,;\t]/i,        // cabeçalho repetido
-];
-
-function isSkipLine(description) {
-  return INVOICE_SKIP_PATTERNS.some(p => p.test(description));
-}
-
 function parseInvoiceText(text, cardId, catId) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return [];
-
-  // Detecta cabeçalho
   const first = splitInvoiceLine(lines[0]).map(v => v.toLowerCase());
-  const hasHeader = first.some(v =>
-    ["data","date","descricao","descrição","historico","histórico","valor","amount"].includes(v)
-  );
+  const hasHeader = first.some(v => ["data","date","descricao","descrição","historico","histórico","valor","amount"].includes(v));
   const idx = name => first.findIndex(v => name.some(n => v.includes(n)));
-  const dateIdx    = hasHeader ? idx(["data","date"]) : 0;
-  const descIdx    = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","merchant","lançamento","lancamento"]) : 1;
-  const amountIdx  = hasHeader ? idx(["valor","amount","total"]) : 2;
+  const dateIdx = hasHeader ? idx(["data","date"]) : 0;
+  const descIdx = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","merchant"]) : 1;
+  const amountIdx = hasHeader ? idx(["valor","amount","total"]) : 2;
   const categoryIdx = hasHeader ? idx(["categoria","category","tipo"]) : -1;
-
-  const results = [];
-
-  for (const line of lines.slice(hasHeader ? 1 : 0)) {
+  return lines.slice(hasHeader ? 1 : 0).map(line => {
     const cols = splitInvoiceLine(line);
-
-    // Linha deve ter ao menos 2 colunas para ser válida
-    if (cols.length < 2) continue;
-
-    const description = cols[descIdx >= 0 ? descIdx : 1] || "";
-
-    // Pula linhas de resumo/pagamento/cabeçalho secundário
-    if (isSkipLine(description)) continue;
-    if (isSkipLine(line)) continue;
-
-    const rawAmount = cols[amountIdx >= 0 ? amountIdx : cols.length - 1];
-    const rawStr = String(rawAmount || "").trim();
-
-    // Valor negativo no CSV do Itaú = crédito (pagamento) — ignora
-    // Valor positivo = compra (despesa)
-    const isNegativeInFile = rawStr.startsWith("-");
-    if (isNegativeInFile) continue;
-
-    const amount = parseMoney(rawStr);
-    if (!amount || amount <= 0) continue;
-
-    // Data válida obrigatória
-    const dateRaw = cols[dateIdx >= 0 ? dateIdx : 0] || "";
-    const date = parseInvoiceDate(dateRaw);
-    // Se a data ficou como hoje é porque não parseou — pula se a coluna claramente não é data
-    if (!dateRaw.match(/\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4}/)) continue;
-
+    const amount = parseMoney(cols[amountIdx >= 0 ? amountIdx : cols.length - 1]);
+    if (!amount) return null;
+    const description = cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada";
     const sheetCategory = categoryIdx >= 0 ? cols[categoryIdx] : "";
-
-    results.push({
+    return {
       type: "expense",
       amount,
-      description: description || "Fatura importada",
+      description,
       category_id: inferCategoryId(sheetCategory, description, catId),
       payment_method: "credit",
       credit_card_id: cardId,
-      date,
-    });
-  }
-
-  return results;
+      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
+    };
+  }).filter(Boolean);
 }
 
 // - NEW TX MODAL -
@@ -742,37 +699,31 @@ function NewTxModal({ onClose, onSave }) {
 
 function InvoiceImportModal({ onClose, onImport }) {
   const [cardId, setCardId] = useState(CREDIT_CARDS_DEFAULT[0]?.id || "");
-  const [rows, setRows]     = useState([]);
-  const [fileText, setFileText] = useState("");
+  const [catId, setCatId] = useState("other");
+  const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
+  const [fileText, setFileText] = useState("");
   const [saving, setSaving] = useState(false);
-  const [parseError, setParseError] = useState("");
-  const fileInputRef = useRef(null);
-
-  const total = rows.reduce((s,t) => s + Number(t.amount), 0);
+  const cats = CATEGORIES.filter(c => c.type === "expense" || c.type === "both");
+  const total = rows.reduce((s,t)=>s+Number(t.amount),0);
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Reseta estado antes de processar novo arquivo
-    setRows([]);
-    setParseError("");
     setFileName(file.name);
     const text = await file.text();
     setFileText(text);
-    const parsed = parseInvoiceText(text, cardId, "other");
-    if (parsed.length === 0) {
-      setParseError("Nenhum lançamento detectado. Verifique se o arquivo é um CSV válido de fatura.");
-    }
-    setRows(parsed);
+    setRows(parseInvoiceText(text, cardId, catId));
   }
 
   function updateCard(id) {
     setCardId(id);
-    if (fileText) {
-      const parsed = parseInvoiceText(fileText, id, "other");
-      setRows(parsed);
-    }
+    setRows(fileText ? parseInvoiceText(fileText, id, catId) : rows.map(t => ({ ...t, credit_card_id: id })));
+  }
+
+  function updateCat(id) {
+    setCatId(id);
+    setRows(fileText ? parseInvoiceText(fileText, cardId, id) : rows.map(t => ({ ...t, category_id: id })));
   }
 
   async function importRows() {
@@ -785,58 +736,49 @@ function InvoiceImportModal({ onClose, onImport }) {
 
   return (
     <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{ maxWidth:680 }}>
+      <div className="modal" style={{ maxWidth:720 }}>
         <div className="modal-hd">
-          <div className="modal-title">Importar fatura do cartão</div>
+          <div className="modal-title">Importar fatura</div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
-
-        <div style={{ marginBottom:14 }}>
-          <label className="fl">Cartão</label>
-          <select className="fsel" value={cardId} onChange={e=>updateCard(e.target.value)}>
-            {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-
-        <div className="fg" style={{ marginBottom:6 }}>
-          <label className="fl">Arquivo CSV ou TXT da fatura</label>
-          <input
-            ref={fileInputRef}
-            className="fi"
-            type="file"
-            accept=".csv,.txt,text/csv,text/plain"
-            onChange={handleFile}
-            // key força re-render do input ao limpar, permitindo selecionar o mesmo arquivo novamente
-            key={fileName || "empty"}
-          />
-        </div>
-        <div style={{ fontSize:11,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
-          Exporte o CSV direto do app ou site do banco (Itaú, Santander, Nubank etc). Parcelas detectadas automaticamente. Pagamentos e créditos são ignorados.
-        </div>
-
-        {parseError && (
-          <div className="alert warn" style={{ marginBottom:12,fontSize:13 }}>
-            ⚠️ {parseError}
+        <div className="g2" style={{ gap:12,marginBottom:16 }}>
+          <div>
+            <label className="fl">Cartão</label>
+            <select className="fsel" value={cardId} onChange={e=>updateCard(e.target.value)}>
+              {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           </div>
-        )}
-
+          <div>
+            <label className="fl">Categoria padrão</label>
+            <select className="fsel" value={catId} onChange={e=>updateCat(e.target.value)}>
+              {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="fg">
+          <label className="fl">Arquivo CSV ou TXT</label>
+          <input className="fi" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
+        </div>
+        <div style={{ fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
+          Use colunas como data, descricao, valor e categoria. Valores podem usar virgula ou ponto nas casas decimais.
+        </div>
         {rows.length > 0 && (
           <div className="card" style={{ padding:12,marginBottom:16 }}>
-            <div className="sec-hd" style={{ marginBottom:8 }}>
-              <div>
-                <div className="sec-title">{rows.length} compras detectadas</div>
-                <div style={{ fontSize:11,color:"var(--text2)",marginTop:2 }}>Categoria inferida automaticamente — ajuste se quiser antes de importar</div>
-              </div>
+            <div className="sec-hd">
+              <div className="sec-title">{rows.length} lancamentos detectados</div>
               <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                <span className="badge red">-{fmt(total)}</span>
-                <button className="btn btn-g btn-sm" onClick={()=>{ setRows([]); setFileText(""); setFileName(""); setParseError(""); }}>Limpar</button>
+                <span className="badge green">{fmt(total)}</span>
+                <button className="btn btn-g btn-sm" onClick={()=>setRows([])}>Limpar</button>
               </div>
             </div>
-            <div style={{ maxHeight:300,overflowY:"auto" }}>
+            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:8 }}>
+              Categoria inferida automaticamente por IA. Ajuste se necessario antes de importar.
+            </div>
+            <div style={{ maxHeight:320,overflow:"auto" }}>
               {rows.map((tx,i)=>(
-                <div key={i} style={{ display:"grid",gridTemplateColumns:"86px 1fr 110px 84px",gap:8,alignItems:"center",padding:"5px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
+                <div key={i} style={{ display:"grid",gridTemplateColumns:"90px 1fr 120px 90px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
                   <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
-                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }} title={tx.description}>{tx.description}</span>
+                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
                   <select
                     value={tx.category_id}
                     onChange={e=>setRows(rs=>rs.map((r,j)=>j===i?{...r,category_id:e.target.value}:r))}
@@ -850,18 +792,8 @@ function InvoiceImportModal({ onClose, onImport }) {
             </div>
           </div>
         )}
-
-        <button
-          className="btn btn-p btn-lg"
-          style={{ width:"100%" }}
-          onClick={importRows}
-          disabled={saving || !rows.length}
-        >
-          {saving
-            ? <div className="spinner" />
-            : rows.length
-              ? `Importar ${rows.length} compras — Total ${fmt(total)}`
-              : "Selecione um arquivo CSV"}
+        <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
+          {saving ? <div className="spinner" /> : rows.length ? `Importar ${rows.length} lancamentos (${fmt(total)})` : "Selecione um arquivo CSV"}
         </button>
       </div>
     </div>
