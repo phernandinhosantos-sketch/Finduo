@@ -562,40 +562,6 @@ function splitInvoiceLine(line) {
   return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
 }
 
-function parseInstallments(description, date, amount, cardId, catId) {
-  // Detecta padrões: "2/6", "02/06", "PARC 2/6", "PARCELA 2 DE 6"
-  const m =
-    description.match(/\b(\d{1,2})\s*[\/]\s*(\d{1,2})\b/) ||
-    description.match(/parcela\s+(\d+)\s+de\s+(\d+)/i) ||
-    description.match(/parc\.?\s*(\d+)\s*\/\s*(\d+)/i);
-  if (!m) return null;
-  const current = parseInt(m[1]);
-  const total   = parseInt(m[2]);
-  if (!total || total < 2 || current > total) return null;
-
-  // Gera lançamentos para as parcelas restantes (current até total)
-  const baseDesc = description.replace(m[0], "").replace(/\s{2,}/g, " ").trim();
-  const [y, mo, d] = date.split("-").map(Number);
-  const rows = [];
-  for (let i = current; i <= total; i++) {
-    const moOffset = mo - 1 + (i - current);
-    const yr = y + Math.floor(moOffset / 12);
-    const mn = (moOffset % 12) + 1;
-    const dayMax = new Date(yr, mn, 0).getDate();
-    const dy = Math.min(d, dayMax);
-    rows.push({
-      type: "expense",
-      amount,
-      description: `${baseDesc} (${i}/${total})`,
-      category_id: inferCategoryId("", baseDesc, catId),
-      payment_method: "credit",
-      credit_card_id: cardId,
-      date: `${yr}-${String(mn).padStart(2,"0")}-${String(dy).padStart(2,"0")}`,
-    });
-  }
-  return rows;
-}
-
 function parseInvoiceText(text, cardId, catId) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return [];
@@ -606,26 +572,59 @@ function parseInvoiceText(text, cardId, catId) {
   const descIdx = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","merchant"]) : 1;
   const amountIdx = hasHeader ? idx(["valor","amount","total"]) : 2;
   const categoryIdx = hasHeader ? idx(["categoria","category","tipo"]) : -1;
-  return lines.slice(hasHeader ? 1 : 0).flatMap(line => {
+  return lines.slice(hasHeader ? 1 : 0).map(line => {
     const cols = splitInvoiceLine(line);
     const amount = parseMoney(cols[amountIdx >= 0 ? amountIdx : cols.length - 1]);
-    if (!amount) return [];
+    if (!amount) return null;
     const description = cols[descIdx >= 0 ? descIdx : 1] || "Fatura importada";
     const sheetCategory = categoryIdx >= 0 ? cols[categoryIdx] : "";
-    const date = parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]);
-
-    // Tenta expandir parcelas
-    const installments = parseInstallments(description, date, amount, cardId, inferCategoryId(sheetCategory, description, catId));
-    if (installments) return installments;
-
-    return [{
+    return {
       type: "expense",
       amount,
       description,
       category_id: inferCategoryId(sheetCategory, description, catId),
       payment_method: "credit",
       credit_card_id: cardId,
-      date,
+      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
+    };
+  }).filter(Boolean);
+}
+
+function parseBankStatement(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const first = splitInvoiceLine(lines[0]).map(v => v.toLowerCase());
+  const hasHeader = first.some(v => ["data","date","descricao","descrição","historico","valor","amount","lancamento"].includes(v));
+  const idx = names => first.findIndex(v => names.some(n => v.includes(n)));
+  const dateIdx   = hasHeader ? idx(["data","date","lancamento"]) : 0;
+  const descIdx   = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","memo"]) : 1;
+  const amountIdx = hasHeader ? idx(["valor","amount","total","credito","debito"]) : 2;
+  const creditIdx = hasHeader ? idx(["credito","credit","entrada"]) : -1;
+  const debitIdx  = hasHeader ? idx(["debito","debit","saida","saída"]) : -1;
+
+  return lines.slice(hasHeader ? 1 : 0).flatMap(line => {
+    const cols = splitInvoiceLine(line);
+    const description = cols[descIdx >= 0 ? descIdx : 1] || "Extrato importado";
+    let amount = 0, type = "expense";
+    if (creditIdx >= 0 && debitIdx >= 0) {
+      const credit = parseMoney(cols[creditIdx]);
+      const debit  = parseMoney(cols[debitIdx]);
+      if (credit > 0)     { amount = credit; type = "income";  }
+      else if (debit > 0) { amount = debit;  type = "expense"; }
+      else return [];
+    } else {
+      const raw = String(cols[amountIdx >= 0 ? amountIdx : cols.length - 1] || "").trim();
+      const val = parseMoney(raw);
+      if (!val) return [];
+      type   = raw.startsWith("-") ? "expense" : "income";
+      amount = val;
+    }
+    return [{
+      type, amount, description,
+      category_id: inferCategoryId("", description, type === "income" ? "salary" : "other"),
+      payment_method: "debit",
+      credit_card_id: null,
+      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
     }];
   }).filter(Boolean);
 }
@@ -721,15 +720,17 @@ function NewTxModal({ onClose, onSave }) {
   );
 }
 
-function InvoiceImportModal({ onClose, onImport }) {
-  const [cardId, setCardId] = useState(CREDIT_CARDS_DEFAULT[0]?.id || "");
-  const [catId, setCatId] = useState("other");
-  const [rows, setRows] = useState([]);
-  const [fileName, setFileName] = useState("");
+// - MODAL UNIFICADO DE IMPORTAÇÃO (fatura + extrato) -
+function ImportModal({ onClose, onImport }) {
+  const [mode, setMode]       = useState(null);       // "fatura" | "extrato" | null
+  const [cardId, setCardId]   = useState(CREDIT_CARDS_DEFAULT[0]?.id || "");
+  const [rows, setRows]       = useState([]);
   const [fileText, setFileText] = useState("");
-  const [saving, setSaving] = useState(false);
-  const cats = CATEGORIES.filter(c => c.type === "expense" || c.type === "both");
-  const total = rows.reduce((s,t)=>s+Number(t.amount),0);
+  const [saving, setSaving]   = useState(false);
+  const [fileName, setFileName] = useState("");
+
+  const income  = rows.filter(r=>r.type==="income").reduce((s,r)=>s+r.amount,0);
+  const expense = rows.filter(r=>r.type==="expense").reduce((s,r)=>s+r.amount,0);
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -737,207 +738,131 @@ function InvoiceImportModal({ onClose, onImport }) {
     setFileName(file.name);
     const text = await file.text();
     setFileText(text);
-    setRows(parseInvoiceText(text, cardId, catId));
-  }
-
-  function updateCard(id) {
-    setCardId(id);
-    setRows(fileText ? parseInvoiceText(fileText, id, catId) : rows.map(t => ({ ...t, credit_card_id: id })));
-  }
-
-  function updateCat(id) {
-    setCatId(id);
-    setRows(fileText ? parseInvoiceText(fileText, cardId, id) : rows.map(t => ({ ...t, category_id: id })));
-  }
-
-  async function importRows() {
-    if (!rows.length) return;
-    setSaving(true);
-    await onImport(rows);
-    setSaving(false);
-    onClose();
-  }
-
-  return (
-    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{ maxWidth:720 }}>
-        <div className="modal-hd">
-          <div className="modal-title">Importar fatura</div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div style={{ marginBottom:16 }}>
-          <label className="fl">Cartão</label>
-          <select className="fsel" value={cardId} onChange={e=>updateCard(e.target.value)}>
-            {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div className="fg">
-          <label className="fl">Arquivo CSV ou TXT</label>
-          <input className="fi" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
-        </div>
-        <div style={{ fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
-          Use colunas como data, descricao, valor e categoria. Valores podem usar virgula ou ponto nas casas decimais.
-        </div>
-        {rows.length > 0 && (
-          <div className="card" style={{ padding:12,marginBottom:16 }}>
-            <div className="sec-hd">
-              <div className="sec-title">{rows.length} lancamentos detectados</div>
-              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                <span className="badge green">{fmt(total)}</span>
-                <button className="btn btn-g btn-sm" onClick={()=>setRows([])}>Limpar</button>
-              </div>
-            </div>
-            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:8 }}>
-              Categoria inferida automaticamente por IA. Ajuste se necessario antes de importar.
-            </div>
-            <div style={{ maxHeight:320,overflow:"auto" }}>
-              {rows.map((tx,i)=>(
-                <div key={i} style={{ display:"grid",gridTemplateColumns:"90px 1fr 120px 90px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
-                  <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
-                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
-                  <select
-                    value={tx.category_id}
-                    onChange={e=>setRows(rs=>rs.map((r,j)=>j===i?{...r,category_id:e.target.value}:r))}
-                    style={{ background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:6,padding:"3px 6px",color:"var(--text)",fontSize:11,cursor:"pointer" }}
-                  >
-                    {CATEGORIES.filter(c=>c.type!=="income").map(c=><option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-                  </select>
-                  <span style={{ textAlign:"right",color:"var(--red)",fontFamily:"monospace" }}>-{fmt(tx.amount)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
-          {saving ? <div className="spinner" /> : rows.length ? `Importar ${rows.length} lancamentos (${fmt(total)})` : "Selecione um arquivo CSV"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// - IMPORTAR EXTRATO BANCÁRIO -
-function BankStatementModal({ onClose, onImport }) {
-  const [rows, setRows]       = useState([]);
-  const [fileText, setFileText] = useState("");
-  const [saving, setSaving]   = useState(false);
-  const total = rows.reduce((s,t) => s + (t.type==="expense" ? -t.amount : t.amount), 0);
-
-  function handleFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const text = ev.target.result;
-      setFileText(text);
-      setRows(parseBankStatement(text));
-    };
-    reader.readAsText(file, "UTF-8");
-  }
-
-  async function importRows() {
-    if (!rows.length) return;
-    setSaving(true);
-    await onImport(rows);
-    setSaving(false);
-    onClose();
-  }
-
-  return (
-    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{ maxWidth:720 }}>
-        <div className="modal-hd">
-          <div className="modal-title">Importar extrato bancário</div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="fg" style={{ marginBottom:8 }}>
-          <label className="fl">Arquivo CSV ou TXT do banco</label>
-          <input className="fi" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
-        </div>
-        <div style={{ fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:16 }}>
-          Compatível com extratos do Itaú, Bradesco, Nubank, Inter, Santander e outros. Colunas: data, descrição, valor (negativo = débito, positivo = crédito).
-        </div>
-        {rows.length > 0 && (
-          <div className="card" style={{ padding:12,marginBottom:16 }}>
-            <div className="sec-hd">
-              <div className="sec-title">{rows.length} lançamentos detectados</div>
-              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                <span className={`badge ${total>=0?"green":"red"}`}>{total>=0?"+":""}{fmt(Math.abs(total))}</span>
-                <button className="btn btn-g btn-sm" onClick={()=>setRows([])}>Limpar</button>
-              </div>
-            </div>
-            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:8 }}>
-              Débitos como despesa, créditos como receita. Categoria inferida automaticamente.
-            </div>
-            <div style={{ maxHeight:320,overflow:"auto" }}>
-              {rows.map((tx,i)=>(
-                <div key={i} style={{ display:"grid",gridTemplateColumns:"90px 1fr 90px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
-                  <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
-                  <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
-                  <span style={{ textAlign:"right",color:tx.type==="income"?"var(--green)":"var(--red)",fontFamily:"monospace" }}>
-                    {tx.type==="income"?"+":"-"}{fmt(tx.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={importRows} disabled={saving||!rows.length}>
-          {saving ? <div className="spinner" /> : rows.length ? `Importar ${rows.length} lançamentos` : "Selecione um arquivo CSV"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// - PARSE EXTRATO BANCÁRIO -
-function parseBankStatement(text) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if (!lines.length) return [];
-  const first = splitInvoiceLine(lines[0]).map(v => v.toLowerCase());
-  const hasHeader = first.some(v => ["data","date","descricao","descrição","historico","valor","amount","lancamento"].includes(v));
-  const idx = names => first.findIndex(v => names.some(n => v.includes(n)));
-  const dateIdx   = hasHeader ? idx(["data","date","lancamento"]) : 0;
-  const descIdx   = hasHeader ? idx(["descricao","descrição","historico","histórico","estabelecimento","memo"]) : 1;
-  const amountIdx = hasHeader ? idx(["valor","amount","total","credito","debito"]) : 2;
-  const creditIdx = hasHeader ? idx(["credito","credit","entrada"]) : -1;
-  const debitIdx  = hasHeader ? idx(["debito","debit","saida","saída"]) : -1;
-
-  return lines.slice(hasHeader ? 1 : 0).flatMap(line => {
-    const cols = splitInvoiceLine(line);
-    const description = cols[descIdx >= 0 ? descIdx : 1] || "Extrato importado";
-
-    // Suporte a colunas separadas de débito/crédito (ex: Bradesco, Itaú)
-    let amount = 0;
-    let type = "expense";
-    if (creditIdx >= 0 && debitIdx >= 0) {
-      const credit = parseMoney(cols[creditIdx]);
-      const debit  = parseMoney(cols[debitIdx]);
-      if (credit > 0)      { amount = credit; type = "income";  }
-      else if (debit > 0)  { amount = debit;  type = "expense"; }
-      else return [];
+    if (mode === "fatura") {
+      setRows(parseInvoiceText(text, cardId, "other"));
     } else {
-      const raw = String(cols[amountIdx >= 0 ? amountIdx : cols.length - 1] || "").trim();
-      const val = parseMoney(raw);
-      if (!val) return [];
-      // Valor negativo = débito (despesa)
-      type   = raw.startsWith("-") ? "expense" : "income";
-      amount = val;
+      setRows(parseBankStatement(text));
     }
+  }
 
-    return [{
-      type,
-      amount,
-      description,
-      category_id: inferCategoryId("", description, type === "income" ? "salary" : "other"),
-      payment_method: "debit",
-      credit_card_id: null,
-      date: parseInvoiceDate(cols[dateIdx >= 0 ? dateIdx : 0]),
-    }];
-  }).filter(Boolean);
+  function onCardChange(id) {
+    setCardId(id);
+    if (fileText && mode === "fatura") setRows(parseInvoiceText(fileText, id, "other"));
+  }
+
+  async function doImport() {
+    if (!rows.length) return;
+    setSaving(true);
+    await onImport(rows);
+    setSaving(false);
+    onClose();
+  }
+
+  const incomeCount  = rows.filter(r=>r.type==="income").length;
+  const expenseCount = rows.filter(r=>r.type==="expense").length;
+
+  return (
+    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{ maxWidth:680 }}>
+        <div className="modal-hd">
+          <div className="modal-title">Importar lançamentos</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        {/* Passo 1 — escolhe o tipo */}
+        {!mode && (
+          <div>
+            <p style={{ color:"var(--text2)",fontSize:13,marginBottom:20 }}>
+              O que você quer importar?
+            </p>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+              <button onClick={()=>setMode("fatura")} style={{ padding:"20px 16px",background:"var(--surface2)",border:"2px solid var(--border2)",borderRadius:12,cursor:"pointer",textAlign:"left",transition:"border-color .2s" }}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--green)"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border2)"}>
+                <div style={{ fontSize:28,marginBottom:8 }}>💳</div>
+                <div style={{ fontWeight:700,color:"var(--text)",marginBottom:4 }}>Fatura de cartão</div>
+                <div style={{ fontSize:12,color:"var(--text2)" }}>CSV do Itaú, Santander ou qualquer banco. Parcelas detectadas automaticamente.</div>
+              </button>
+              <button onClick={()=>setMode("extrato")} style={{ padding:"20px 16px",background:"var(--surface2)",border:"2px solid var(--border2)",borderRadius:12,cursor:"pointer",textAlign:"left",transition:"border-color .2s" }}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--green)"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border2)"}>
+                <div style={{ fontSize:28,marginBottom:8 }}>🏦</div>
+                <div style={{ fontWeight:700,color:"var(--text)",marginBottom:4 }}>Extrato bancário</div>
+                <div style={{ fontSize:12,color:"var(--text2)" }}>Débitos viram despesa, créditos viram receita. Deduplicação automática.</div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Passo 2 — upload */}
+        {mode && (
+          <>
+            <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:16 }}>
+              <button onClick={()=>{setMode(null);setRows([]);setFileText("");setFileName("");}}
+                style={{ background:"none",border:"none",color:"var(--text2)",cursor:"pointer",fontSize:18,padding:0 }}>←</button>
+              <span style={{ fontSize:13,color:"var(--text2)" }}>
+                {mode==="fatura" ? "💳 Fatura de cartão" : "🏦 Extrato bancário"}
+              </span>
+            </div>
+
+            {mode === "fatura" && (
+              <div style={{ marginBottom:14 }}>
+                <label className="fl">Cartão</label>
+                <select className="fsel" value={cardId} onChange={e=>onCardChange(e.target.value)}>
+                  {CREDIT_CARDS_DEFAULT.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Arquivo CSV ou TXT</label>
+              <input className="fi" type="file" accept=".csv,.txt" onChange={handleFile} />
+            </div>
+            <div style={{ fontSize:11,color:"var(--text2)",marginBottom:16,lineHeight:1.5 }}>
+              {mode==="fatura"
+                ? "Exportado direto do app ou site do banco. Colunas: data, descrição, valor. Parcelas expandidas automaticamente."
+                : "Compatível com Itaú, Nubank, Inter, Bradesco, Santander. Valores negativos = débito."}
+            </div>
+
+            {rows.length > 0 && (
+              <div className="card" style={{ padding:12,marginBottom:16 }}>
+                <div className="sec-hd" style={{ marginBottom:8 }}>
+                  <div className="sec-title">{rows.length} lançamentos detectados</div>
+                  <div style={{ display:"flex",gap:6 }}>
+                    {incomeCount  > 0 && <span className="badge green">+{fmt(income)} ({incomeCount})</span>}
+                    {expenseCount > 0 && <span className="badge red">-{fmt(expense)} ({expenseCount})</span>}
+                    <button className="btn btn-g btn-sm" onClick={()=>{setRows([]);setFileText("");setFileName("");}}>Limpar</button>
+                  </div>
+                </div>
+                <div style={{ maxHeight:280,overflowY:"auto" }}>
+                  {rows.map((tx,i)=>(
+                    <div key={i} style={{ display:"grid",gridTemplateColumns:"88px 1fr 80px",gap:8,alignItems:"center",padding:"5px 0",borderBottom:"1px solid var(--border)",fontSize:12 }}>
+                      <span style={{ color:"var(--text2)" }}>{fmtDate(tx.date)}</span>
+                      <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{tx.description}</span>
+                      <span style={{ textAlign:"right",fontFamily:"monospace",color:tx.type==="income"?"var(--green)":"var(--red)" }}>
+                        {tx.type==="income"?"+":"-"}{fmt(tx.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button className="btn btn-p btn-lg" style={{ width:"100%" }} onClick={doImport} disabled={saving||!rows.length}>
+              {saving
+                ? <div className="spinner" />
+                : rows.length
+                  ? `Importar ${rows.length} lançamentos → Dashboard`
+                  : "Selecione um arquivo CSV"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
-
+// - STAT CARD -
 function SC({ label, value, color, icon, sub }) {
   return (
     <div className={`stat-card ${color}`}>
@@ -950,7 +875,8 @@ function SC({ label, value, color, icon, sub }) {
 }
 
 // - DASHBOARD -
-function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
+function Dashboard({ txs, goals, members, currentMonth, onMonthChange, onImport }) {
+  const [showImport, setShowImport] = useState(false);
   const [y, m] = currentMonth;
   const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
 
@@ -991,10 +917,15 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
           <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,letterSpacing:"-.5px" }}>Dashboard</h1>
           <p style={{ color:"var(--text2)",fontSize:13,marginTop:2 }}>Visão completa do casal</p>
         </div>
-        <div className="month-nav">
-          <button onClick={()=>onMonthChange(-1)}>‹</button>
-          <span>{MONTH_NAMES[m]} {y}</span>
-          <button onClick={()=>onMonthChange(1)}>›</button>
+        <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+          <button className="btn btn-p" style={{ fontSize:13,padding:"8px 16px" }} onClick={()=>setShowImport(true)}>
+            Importar
+          </button>
+          <div className="month-nav">
+            <button onClick={()=>onMonthChange(-1)}>‹</button>
+            <span>{MONTH_NAMES[m]} {y}</span>
+            <button onClick={()=>onMonthChange(1)}>›</button>
+          </div>
         </div>
       </div>
 
@@ -1092,17 +1023,17 @@ function Dashboard({ txs, goals, members, currentMonth, onMonthChange }) {
           <div className="tx-list">{recent.map(tx => <TxItem key={tx.id} tx={tx} members={members} />)}</div>
         )}
       </div>
+      {showImport && <ImportModal onClose={()=>setShowImport(false)} onImport={onImport} />}
     </div>
   );
 }
 
 // - TRANSACTIONS -
-function Transactions({ txs, members, onDelete, onDeleteMany, onImport, currentMonth, onMonthChange }) {
+function Transactions({ txs, members, onDelete, onDeleteMany, currentMonth, onMonthChange }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(null);
   const [checked, setChecked] = useState([]);
-  const [showExtrato, setShowExtrato] = useState(false);
   const [y, m] = currentMonth;
   const mTxs = txs.filter(t => isInDashboardPeriod(t, y, m));
 
@@ -1135,9 +1066,6 @@ function Transactions({ txs, members, onDelete, onDeleteMany, onImport, currentM
         <SC label="Receitas" value={fmt(inc)} color="green" icon="↑" />
         <SC label="Despesas" value={fmt(exp)} color="red" icon="↓" />
         <SC label="Saldo" value={fmt(inc-exp)} color={inc-exp>=0?"green":"red"} icon="💰" />
-      </div>
-      <div style={{ display:"flex",gap:8,marginBottom:16 }}>
-        <button className="btn btn-g" onClick={()=>setShowExtrato(true)}>Importar extrato bancário</button>
       </div>
 
       <div className="card fade-up s1">
@@ -1224,10 +1152,11 @@ function Transactions({ txs, members, onDelete, onDeleteMany, onImport, currentM
           </div>
         </div>
       )}
-      {showExtrato && <BankStatementModal onClose={()=>setShowExtrato(false)} onImport={onImport} />}
     </div>
   );
 }
+
+// - CARTÕES -
 function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
   const [showImport, setShowImport] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -1244,7 +1173,7 @@ function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
       <h1 style={{ fontFamily:"var(--font-d)",fontSize:24,fontWeight:800,marginBottom:6 }}>Cartões de Crédito</h1>
       <p style={{ color:"var(--text2)",fontSize:13,marginBottom:24 }}>Faturas com vencimento em {MONTH_NAMES[m]} {y}</p>
       <div style={{ display:"flex",gap:10,marginBottom:20 }}>
-        <button className="btn btn-p" onClick={()=>setShowImport(true)}>Importar fatura</button>
+        <button className="btn btn-p" onClick={()=>setShowImport(true)}>Importar fatura / extrato</button>
         <button className="btn btn-d" onClick={deleteSelected} disabled={!selected.length}>Excluir selecionados {selected.length?`(${selected.length})`:""}</button>
       </div>
       <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
@@ -1305,7 +1234,7 @@ function Cards({ txs, members, currentMonth, onImport, onDeleteSelected }) {
           );
         })}
       </div>
-      {showImport && <InvoiceImportModal onClose={()=>setShowImport(false)} onImport={onImport} />}
+      {showImport && <ImportModal onClose={()=>setShowImport(false)} onImport={onImport} />}
     </div>
   );
 }
@@ -2123,32 +2052,63 @@ export default function App() {
   }
 
   async function importTxs(rows) {
-    if(!rows.length) return;
-    const cardId = rows[0].credit_card_id;
-    const card = CREDIT_CARDS_DEFAULT.find(c=>c.id===cardId);
-    if(card && cardId) {
-      // Detect month from first transaction
-      const firstDate = new Date(rows[0].date + "T12:00");
-      const fy = firstDate.getFullYear();
-      const fm = firstDate.getMonth();
-      // Delete existing for this card+cycle
-      const existing = txs.filter(t =>
-        t.credit_card_id === cardId && isInCardInvoice(t.date, fy, fm, card)
-      );
-      if(existing.length > 0) {
-        await supabase.from("transactions").delete().in("id", existing.map(t=>t.id));
-        addToast(`${existing.length} lancamentos anteriores substituidos`);
+    if (!rows.length) return;
+
+    const isFatura = rows[0].payment_method === "credit" && rows[0].credit_card_id;
+
+    if (isFatura) {
+      // --- FATURA: deduplica por cartão + ciclo ---
+      const cardId = rows[0].credit_card_id;
+      const card   = CREDIT_CARDS_DEFAULT.find(c => c.id === cardId);
+      if (card) {
+        // Agrupa por mês de fatura e limpa cada ciclo afetado
+        const cycles = new Set(rows.map(r => {
+          const d = new Date(r.date + "T12:00");
+          return `${d.getFullYear()}-${d.getMonth()}`;
+        }));
+        for (const key of cycles) {
+          const [fy, fm] = key.split("-").map(Number);
+          const existing = txs.filter(t =>
+            t.credit_card_id === cardId && isInCardInvoice(t.date, fy, fm, card)
+          );
+          if (existing.length > 0) {
+            await supabase.from("transactions").delete().in("id", existing.map(t => t.id));
+          }
+        }
+      }
+    } else {
+      // --- EXTRATO: deduplica por data+descrição+valor ---
+      const toDelete = [];
+      for (const row of rows) {
+        const dup = txs.find(t =>
+          t.date === row.date &&
+          Math.abs(Number(t.amount) - row.amount) < 0.01 &&
+          (t.description || "").toLowerCase().trim() === (row.description || "").toLowerCase().trim()
+        );
+        if (dup) toDelete.push(dup.id);
+      }
+      if (toDelete.length > 0) {
+        await supabase.from("transactions").delete().in("id", toDelete);
       }
     }
+
+    // Salva todos os lançamentos
     const payload = rows.map(tx => ({
       ...tx,
       workspace_id: workspace.id,
       user_id: session.user.id,
     }));
     const { error } = await supabase.from("transactions").insert(payload);
-    if(error) { addToast("Erro ao importar","error"); return; }
-    addToast(`${rows.length} lancamentos importados com sucesso!`);
+    if (error) { addToast("Erro ao importar", "error"); return; }
+
+    // Navega automaticamente para o mês do primeiro lançamento
+    const firstDate = new Date(rows[0].date + "T12:00");
+    const ny = firstDate.getFullYear();
+    const nm = firstDate.getMonth();
+    setCurrentMonth([ny, nm]);
+
     await loadData();
+    addToast(`${rows.length} lançamentos importados! Dashboard atualizado.`);
   }
 
   function changeMonth(dir) {
@@ -2267,8 +2227,8 @@ export default function App() {
             </div>
           </div>
 
-          {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} />}
-          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} onDeleteMany={deleteTxs} onImport={importTxs} currentMonth={currentMonth} onMonthChange={changeMonth} />}
+          {page==="dashboard"    && <Dashboard txs={txs} goals={goals} members={members} currentMonth={currentMonth} onMonthChange={changeMonth} onImport={importTxs} />}
+          {page==="transactions" && <Transactions txs={txs} members={members} onDelete={deleteTx} onDeleteMany={deleteTxs} currentMonth={currentMonth} onMonthChange={changeMonth} />}
           {page==="cards"        && <Cards txs={txs} members={members} currentMonth={currentMonth} onImport={importTxs} onDeleteSelected={deleteTxs} />}
           {page==="goals"        && <Goals goals={goals} workspaceId={workspace.id} onRefresh={()=>loadData()} />}
           {page==="reports"      && <Reports txs={txs} members={members} />}
